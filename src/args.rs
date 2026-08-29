@@ -2,6 +2,7 @@
 
 use std::{env, path::PathBuf};
 
+use anyhow::Context;
 use clap::Parser;
 
 #[derive(Parser, Debug)]
@@ -21,14 +22,19 @@ impl Args {
     /// # Panics
     ///
     /// Panics if [`env::current_exe`] fails to return a path or if [`Path::parent`](std::path::Path::parent) fails to return a path.
-    pub fn get_config_path(&self) -> PathBuf {
-        self.config.clone().unwrap_or(
-            env::current_exe()
-                .expect("failed to get the current exe path")
-                .parent()
-                .expect("failed to get the current exe path parent")
-                .to_path_buf()
-                .join("config.yaml"),
-        )
+    pub fn get_config_path(&self) -> anyhow::Result<PathBuf> {
+        match &self.config {
+            Some(path) => Ok(path.clone()),
+            None => {
+                let exe = env::current_exe()
+                    .context("failed to determine the current executable path")?;
+
+                let exe_dir = exe
+                    .parent()
+                    .context("failed to determine the executable's directory")?;
+
+                Ok(exe_dir.join("config.yaml"))
+            }
+        }
     }
 }

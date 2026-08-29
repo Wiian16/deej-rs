@@ -27,10 +27,10 @@ fn run() -> anyhow::Result<()> {
     println!("CLI args: {:#?}", args);
     println!(
         "Config path: {:#?}",
-        std::path::absolute(args.get_config_path())
+        std::path::absolute(args.get_config_path()?)
     );
 
-    let config = Config::from_file(args.get_config_path())?;
+    let config = Config::from_file(args.get_config_path()?)?;
     println!("Config: {:#?}", config);
 
     Ok(())
