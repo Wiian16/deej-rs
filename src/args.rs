@@ -12,7 +12,7 @@ pub struct Args {
 
     /// Show verbose logs (useful for debugging serial)
     #[arg(short, long)]
-    verbose: bool,
+    pub verbose: bool,
 }
 
 impl Args {
