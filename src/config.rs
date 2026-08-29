@@ -1,6 +1,7 @@
 use core::fmt;
 use std::{collections::HashMap, io};
 
+use deej_rs::audio::NoiseReduction;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -70,14 +71,6 @@ impl SliderMapping {
             Self::Processes(processes) => processes,
         }
     }
-}
-
-#[derive(Debug, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
-enum NoiseReduction {
-    Low,
-    Default,
-    High,
 }
 
 #[cfg(test)]

@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use core::fmt;
+use serde::Deserialize;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum VolumeTarget {
@@ -20,6 +21,14 @@ impl fmt::Display for VolumeTarget {
             Self::Unmapped => write!(f, "deej.unmapped"),
         }
     }
+}
+
+#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum NoiseReduction {
+    Low,
+    Default,
+    High,
 }
 
 pub enum AudioAdapterError {}
