@@ -1,4 +1,5 @@
-use std::collections::HashMap;
+use core::fmt;
+use std::{collections::HashMap, io};
 
 use serde::Deserialize;
 
@@ -9,6 +10,50 @@ pub struct Config {
     com_port: String,
     baud_rate: u32,
     noise_reduction: NoiseReduction,
+}
+
+impl Config {
+    pub fn from_file(path: impl AsRef<std::path::Path>) -> Result<Self, ConfigError> {
+        let contents = std::fs::read_to_string(path)?;
+        let config: Config = serde_saphyr::from_str(&contents)?;
+        Ok(config)
+    }
+}
+
+#[derive(Debug)]
+pub enum ConfigError {
+    Io(io::Error),
+    Parse(serde_saphyr::Error),
+}
+
+impl fmt::Display for ConfigError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Io(err) => write!(f, "failed to read config file: {err}"),
+            Self::Parse(err) => write!(f, "failed to parse config file: {err}"),
+        }
+    }
+}
+
+impl std::error::Error for ConfigError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Io(err) => Some(err),
+            Self::Parse(err) => Some(err),
+        }
+    }
+}
+
+impl From<io::Error> for ConfigError {
+    fn from(error: io::Error) -> Self {
+        Self::Io(error)
+    }
+}
+
+impl From<serde_saphyr::Error> for ConfigError {
+    fn from(error: serde_saphyr::Error) -> Self {
+        Self::Parse(error)
+    }
 }
 
 #[derive(Debug, Deserialize, Eq, PartialEq)]
