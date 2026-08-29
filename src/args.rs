@@ -27,7 +27,8 @@ impl Args {
                 .expect("failed to get the current exe path")
                 .parent()
                 .expect("failed to get the current exe path parent")
-                .to_path_buf(),
+                .to_path_buf()
+                .join("config.yaml"),
         )
     }
 }
