@@ -89,3 +89,41 @@ impl SliderSmoother {
         changed
     }
 }
+
+#[cfg(test)]
+mod smoother_tests {
+    use super::*;
+
+    fn frame(vals: &[f32]) -> SliderFrame {
+        vals.iter().map(|&v| NormalizedVolume::clamped(v)).collect()
+    }
+
+    #[test]
+    fn first_frame_always_emits() {
+        let mut s = SliderSmoother::new(NoiseReduction::Default);
+        let changed = s.update(&frame(&[0.5, 0.5]));
+        assert_eq!(changed.len(), 2);
+    }
+
+    #[test]
+    fn tiny_jitter_is_suppressed() {
+        let mut s = SliderSmoother::new(NoiseReduction::Default);
+        s.update(&frame(&[0.5]));
+        let changed = s.update(&frame(&[0.501]));
+        assert!(
+            changed.is_empty(),
+            "sub-epsilon change should not be reported"
+        );
+    }
+
+    #[test]
+    fn real_movement_emits() {
+        let mut s = SliderSmoother::new(NoiseReduction::Default);
+        s.update(&frame(&[0.2]));
+        for _ in 0..8 {
+            s.update(&frame(&[0.8])); // fill the averaging window
+        }
+        let changed = s.update(&frame(&[0.8]));
+        assert!(changed.is_empty()); // already converged and reported by now
+    }
+}
