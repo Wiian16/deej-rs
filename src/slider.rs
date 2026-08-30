@@ -1,3 +1,5 @@
+use crate::audio::NormalizedVolume;
+
 /// One line's worth of normalized slider readings, in serial order.
 pub type SliderFrame = Vec<NormalizedVolume>;
 
