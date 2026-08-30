@@ -7,7 +7,7 @@ use simplelog::{ColorChoice, ConfigBuilder, LevelFilter, TermLogger, TerminalMod
 use tokio::sync::watch;
 use tokio_util::sync::CancellationToken;
 
-use crate::{args::Args, config::Config};
+use crate::args::Args;
 
 mod args;
 mod config;
@@ -35,7 +35,7 @@ fn run() -> anyhow::Result<()> {
         std::path::absolute(args.get_config_path()?)
     );
 
-    let config = Config::from_file(args.get_config_path()?)?;
+    let config = config::load(args.get_config_path()?)?;
     println!("Config: {:#?}", config);
 
     let runtime = tokio::runtime::Runtime::new()?;
