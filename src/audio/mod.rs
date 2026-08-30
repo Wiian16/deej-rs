@@ -20,7 +20,39 @@ impl fmt::Display for VolumeTarget {
     }
 }
 
-pub enum AudioAdapterError {}
+#[derive(Debug)]
+pub struct AudioAdapterError {
+    target: VolumeTarget,
+    source: Box<dyn std::error::Error + Send + Sync + 'static>,
+}
+
+impl AudioAdapterError {
+    pub fn new(
+        target: VolumeTarget,
+        source: impl std::error::Error + Send + Sync + 'static,
+    ) -> Self {
+        Self {
+            target,
+            source: Box::new(source),
+        }
+    }
+}
+
+impl fmt::Display for AudioAdapterError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "failed to set volume for {}: {}",
+            self.target, self.source
+        )
+    }
+}
+
+impl std::error::Error for AudioAdapterError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(self.source.as_ref())
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct NormalizedVolume(f32);
