@@ -46,6 +46,12 @@ async fn connect_and_stream(
     tx: &watch::Sender<SliderFrame>,
     shutdown: &CancellationToken,
 ) -> anyhow::Result<()> {
+    // A note on windows: tokio-serial asynchronous reads do not work on windows COM ports, this causes large delays in
+    // updates since reads wait until the buffer is full to return, rather than returning what's available. To fix this,
+    // you will need to add a synchronous read on a blocking thread using serialport-rs to correctly set timeouts for
+    // reading. Currently. this project is focusing on supporting Linux first, so this functionality is not being
+    // prioritized. In the Go version of Deej, it seems that the serial reader uses a very similar mechanism, but it is
+    // much cheaper to block on Go routines than on tokio tasks.
     let port = tokio_serial::new(port_name, baud_rate).open_native_async()?;
     log::info!("connected to {port_name} @ {baud_rate} baud");
 
