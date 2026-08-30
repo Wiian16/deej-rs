@@ -6,11 +6,11 @@ use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
-    slider_mapping: HashMap<u8, SliderMapping>,
-    invert_sliders: bool,
-    com_port: String,
-    baud_rate: u32,
-    noise_reduction: NoiseReduction,
+    pub slider_mapping: HashMap<u8, SliderMapping>,
+    pub invert_sliders: bool,
+    pub com_port: String,
+    pub baud_rate: u32,
+    pub noise_reduction: NoiseReduction,
 }
 
 impl Config {
