@@ -1,11 +1,9 @@
-use std::time::Duration;
+use std::sync::Arc;
 
 use clap::Parser;
-use deej_rs::{audio::NormalizedVolume, serial};
+use deej_rs::audio::{AudioAdapter, DummyAudioAdapter};
 use log::error;
 use simplelog::{ColorChoice, ConfigBuilder, LevelFilter, TermLogger, TerminalMode};
-use tokio::sync::watch;
-use tokio_util::sync::CancellationToken;
 
 use crate::args::Args;
 
@@ -26,56 +24,14 @@ fn main() {
 
 fn run() -> anyhow::Result<()> {
     let args = Args::parse();
-
     setup_logger(args.verbose)?;
 
-    println!("CLI args: {:#?}", args);
-    println!(
-        "Config path: {:#?}",
-        std::path::absolute(args.get_config_path()?)
-    );
+    let service_config = config::load(args.get_config_path()?)?;
+    log::debug!("loaded config: {service_config:#?}");
 
-    let config = config::load(args.get_config_path()?)?;
-    println!("Config: {:#?}", config);
-
+    let adapter: Arc<dyn AudioAdapter> = Arc::new(DummyAudioAdapter);
     let runtime = tokio::runtime::Runtime::new()?;
-
-    runtime.block_on(async {
-        let (tx, mut rx) = watch::channel(vec![NormalizedVolume::MIN]);
-        let cancellation = CancellationToken::new();
-
-        tokio::spawn(async move {
-            loop {
-                let result: String = (*rx
-                    .borrow_and_update()
-                    .iter()
-                    .map(|volume| format!("{:.1}%", volume.get() * 100.0))
-                    .collect::<Vec<_>>()
-                    .join("|")
-                    .to_string())
-                .to_string();
-
-                println!("{}", result);
-                if rx.changed().await.is_err() {
-                    break;
-                }
-            }
-        });
-
-        tokio::spawn(serial::run(
-            config.com_port,
-            config.baud_rate,
-            config.invert_sliders,
-            tx,
-            cancellation,
-        ));
-
-        loop {
-            tokio::time::sleep(Duration::from_secs(1)).await;
-        }
-    });
-
-    Ok(())
+    runtime.block_on(deej_rs::service::run(service_config, adapter))
 }
 
 fn setup_logger(verbose: bool) -> Result<(), log::SetLoggerError> {
