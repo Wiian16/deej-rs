@@ -67,10 +67,7 @@ impl From<RawSliderMapping> for Vec<VolumeTarget> {
     fn from(raw: RawSliderMapping) -> Self {
         match raw {
             RawSliderMapping::Target(name) => vec![resolve_special(name)],
-            RawSliderMapping::Targets(names) => names
-                .into_iter()
-                .map(|name| resolve_special(name))
-                .collect(),
+            RawSliderMapping::Targets(names) => names.into_iter().map(resolve_special).collect(),
         }
     }
 }
