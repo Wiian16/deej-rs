@@ -46,10 +46,16 @@ async fn process_frames(
 
     loop {
         tokio::select! {
+            biased;
             _ = shutdown.cancelled() => break,
             changed = rx.changed() => {
                 if changed.is_err() {
+                    if shutdown.is_cancelled() {
                     log::error!("serial channel closed unexpectedly");
+                    }
+                    else {
+                        log::debug!("serial channel closed during shutdown")
+                    }
                     break;
                 }
             }
