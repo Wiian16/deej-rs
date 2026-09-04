@@ -13,8 +13,11 @@ use crate::{
     slider::{SliderFrame, SliderSmoother},
 };
 
-pub async fn run(config: ServiceConfig, adapter: Arc<dyn AudioAdapter>) -> anyhow::Result<()> {
-    let shutdown = CancellationToken::new();
+pub async fn run(
+    config: ServiceConfig,
+    adapter: Arc<dyn AudioAdapter>,
+    shutdown: CancellationToken,
+) -> anyhow::Result<()> {
     let (tx, rx) = watch::channel(SliderFrame::new());
 
     let serial_task = tokio::spawn(serial::run(
@@ -27,21 +30,10 @@ pub async fn run(config: ServiceConfig, adapter: Arc<dyn AudioAdapter>) -> anyho
 
     let processing_task = tokio::spawn(process_frames(config, adapter, rx, shutdown.clone()));
 
-    wait_for_shutdown_signal().await;
-    log::info!("shutting down...");
-    shutdown.cancel();
+    shutdown.cancelled().await;
 
     let _ = tokio::join!(serial_task, processing_task);
     Ok(())
-}
-
-async fn wait_for_shutdown_signal() {
-    let mut sigterm = signal(SignalKind::terminate()).expect("failed to install SIGTERM handler");
-
-    tokio::select! {
-        _ = tokio::signal::ctrl_c() => {},
-        _ = sigterm.recv() => {}
-    }
 }
 
 async fn process_frames(

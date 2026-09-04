@@ -4,6 +4,8 @@ use clap::Parser;
 use deej_rs::audio::{AudioAdapter, DummyAudioAdapter};
 use log::error;
 use simplelog::{ColorChoice, ConfigBuilder, LevelFilter, TermLogger, TerminalMode};
+use tokio::signal::unix::{SignalKind, signal};
+use tokio_util::sync::CancellationToken;
 
 use crate::args::Args;
 
@@ -31,7 +33,31 @@ fn run() -> anyhow::Result<()> {
 
     let adapter: Arc<dyn AudioAdapter> = Arc::new(DummyAudioAdapter);
     let runtime = tokio::runtime::Runtime::new()?;
-    runtime.block_on(deej_rs::service::run(service_config, adapter))
+    runtime.block_on(async {
+        let shutdown = CancellationToken::new();
+        let service = tokio::spawn(deej_rs::service::run(
+            service_config,
+            adapter,
+            shutdown.clone(),
+        ));
+
+        tokio::spawn(async move {
+            wait_for_shutdown_signal().await;
+            log::info!("shutting down...");
+            shutdown.cancel();
+        });
+
+        service.await?
+    })
+}
+
+async fn wait_for_shutdown_signal() {
+    let mut sigterm = signal(SignalKind::terminate()).expect("failed to install SIGTERM handler");
+
+    tokio::select! {
+        _ = tokio::signal::ctrl_c() => {},
+        _ = sigterm.recv() => {}
+    }
 }
 
 fn setup_logger(verbose: bool) -> Result<(), log::SetLoggerError> {
