@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use clap::Parser;
 use deej_rs::audio::{AudioAdapter, DummyAudioAdapter};
@@ -7,7 +7,7 @@ use simplelog::{ColorChoice, ConfigBuilder, LevelFilter, TermLogger, TerminalMod
 use tokio::signal::unix::{SignalKind, signal};
 use tokio_util::sync::CancellationToken;
 
-use crate::args::Args;
+use crate::{args::Args, config::ConfigWatcher};
 
 mod args;
 mod config;
@@ -26,9 +26,10 @@ fn main() {
 
 fn run() -> anyhow::Result<()> {
     let args = Args::parse();
+    let config_path = args.get_config_path()?;
     setup_logger(args.verbose)?;
 
-    let service_config = config::load(args.get_config_path()?)?;
+    let service_config = config::load(&config_path)?;
     log::debug!("loaded config: {service_config:#?}");
 
     let adapter: Arc<dyn AudioAdapter> = Arc::new(DummyAudioAdapter);
@@ -41,11 +42,30 @@ fn run() -> anyhow::Result<()> {
             shutdown.clone(),
         ));
 
+        let cloned_shutdown = shutdown.clone();
         tokio::spawn(async move {
             wait_for_shutdown_signal().await;
             log::info!("shutting down...");
-            shutdown.cancel();
+            cloned_shutdown.cancel();
         });
+
+        match ConfigWatcher::new(config_path) {
+            Ok(config_watcher) => loop {
+                // config_watcher.notified().await;
+                // log::debug!("Config file changed");
+
+                tokio::select! {
+                    _ = config_watcher.notified() => {
+                        log::debug!("config file changed");
+                    },
+                    _ = shutdown.cancelled() => {break;}
+                };
+            },
+            Err(err) => {
+                log::warn!("can't watch config file for changes, live reload not enabled");
+                log::debug!("notify error: {err}");
+            }
+        }
 
         service.await?
     })
@@ -71,6 +91,8 @@ fn setup_logger(verbose: bool) -> Result<(), log::SetLoggerError> {
         .set_target_level(LevelFilter::Off)
         .set_thread_level(LevelFilter::Off)
         .set_location_level(LevelFilter::Off)
+        .add_filter_ignore_str("notify")
+        .add_filter_ignore_str("inotify")
         .build();
 
     TermLogger::init(log_level, config, TerminalMode::Mixed, ColorChoice::Auto)

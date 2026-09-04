@@ -1,11 +1,16 @@
 use core::fmt;
-use std::{collections::HashMap, io};
+use std::{collections::HashMap, io, sync::Arc, time::Duration};
 
 use deej_rs::{
     audio::VolumeTarget,
     config::{NoiseReduction, ServiceConfig},
 };
+use notify_debouncer_full::{
+    DebounceEventResult, Debouncer, RecommendedCache, new_debouncer,
+    notify::{ErrorKind, EventKind, RecommendedWatcher, RecursiveMode},
+};
 use serde::Deserialize;
+use tokio::sync;
 
 pub fn load(path: impl AsRef<std::path::Path>) -> Result<ServiceConfig, ConfigError> {
     let contents = std::fs::read_to_string(path)?;
@@ -69,6 +74,61 @@ impl From<RawSliderMapping> for Vec<VolumeTarget> {
             RawSliderMapping::Target(name) => vec![resolve_special(name)],
             RawSliderMapping::Targets(names) => names.into_iter().map(resolve_special).collect(),
         }
+    }
+}
+
+/// Watches a single config file for changes.
+pub struct ConfigWatcher {
+    _debouncer: Debouncer<RecommendedWatcher, RecommendedCache>,
+    notifier: Arc<sync::Notify>,
+}
+
+impl ConfigWatcher {
+    pub fn new(path: impl AsRef<std::path::Path>) -> Result<Self, Box<dyn std::error::Error>> {
+        let notify_handle = Arc::new(sync::Notify::new());
+        let notify_tx = notify_handle.clone();
+        let target_name = match path.as_ref().file_name() {
+            Some(name) => name.to_owned(),
+            None => return Err("config path must have a file name".into()),
+        };
+
+        let mut debouncer = new_debouncer(
+            Duration::from_millis(300),
+            None,
+            move |results: DebounceEventResult| match results {
+                Ok(events) => {
+                    let relevant = events.into_iter().any(|event| {
+                        matches!(event.kind, EventKind::Modify(_) | EventKind::Create(_))
+                            && event.paths.iter().any(|path| path.ends_with(&target_name))
+                    });
+
+                    if relevant {
+                        notify_tx.notify_one();
+                    }
+                }
+                Err(err) => {
+                    log::warn!("error getting notifications for config file");
+                    log::debug!("notify error: {:#?}", err)
+                }
+            },
+        )?;
+
+        let parent_dir = path
+            .as_ref()
+            .parent()
+            .ok_or("couldn't get config file's parent directory")?;
+
+        debouncer.watch(parent_dir, RecursiveMode::NonRecursive)?;
+
+        Ok(Self {
+            _debouncer: debouncer,
+            notifier: notify_handle,
+        })
+    }
+
+    /// Waits until the watched file has likely been changed.
+    pub async fn notified(&self) {
+        self.notifier.notified().await;
     }
 }
 
