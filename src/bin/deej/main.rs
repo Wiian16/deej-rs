@@ -29,46 +29,76 @@ fn run() -> anyhow::Result<()> {
     let config_path = args.get_config_path()?;
     setup_logger(args.verbose)?;
 
-    let service_config = config::load(&config_path)?;
+    let mut service_config = config::load(&config_path)?;
     log::debug!("loaded config: {service_config:#?}");
 
     let adapter: Arc<dyn AudioAdapter> = Arc::new(DummyAudioAdapter);
     let runtime = tokio::runtime::Runtime::new()?;
     runtime.block_on(async {
         let shutdown = CancellationToken::new();
-        let service = tokio::spawn(deej_rs::service::run(
-            service_config,
-            adapter,
-            shutdown.clone(),
-        ));
-
         let cloned_shutdown = shutdown.clone();
+
         tokio::spawn(async move {
             wait_for_shutdown_signal().await;
             log::info!("shutting down...");
             cloned_shutdown.cancel();
         });
 
-        match ConfigWatcher::new(config_path) {
-            Ok(config_watcher) => loop {
-                // config_watcher.notified().await;
-                // log::debug!("Config file changed");
-
-                tokio::select! {
-                    _ = config_watcher.notified() => {
-                        log::debug!("config file changed");
-                    },
-                    _ = shutdown.cancelled() => {break;}
-                };
-            },
+        let config_watcher = match ConfigWatcher::new(&config_path) {
+            Ok(watcher) => Some(watcher),
             Err(err) => {
                 log::warn!("can't watch config file for changes, live reload not enabled");
                 log::debug!("notify error: {err}");
+                None
+            }
+        };
+
+        'outer: loop {
+            let service_token = shutdown.child_token();
+            let mut service = tokio::spawn(deej_rs::service::run(
+                service_config.clone(),
+                adapter.clone(),
+                service_token.clone(),
+            ));
+
+            loop {
+                tokio::select! {
+                    _ = wait_for_config_change(&config_watcher) => {
+                        match config::load(&config_path) {
+                            Ok(new_config) => {
+                                log::info!("config change detected, reloading deej");
+                                service_config = new_config;
+                                service_token.cancel();
+                                let _ = service.await;
+                                continue 'outer;
+                            },
+                            Err(err) => {
+                                log::warn!("failed to reload config, keeping current service running");
+                                log::debug!("config error : {err:#}");
+                            }
+                        }
+                    }
+                    _ = shutdown.cancelled() => {
+                        let _ = service.await;
+                        break 'outer;
+                    }
+                    result = &mut service => {
+                        // Service exited on it's own, propagate error
+                        return result?;
+                    }
+                }
             }
         }
 
-        service.await?
+        Ok(())
     })
+}
+
+async fn wait_for_config_change(watcher: &Option<ConfigWatcher>) {
+    match watcher {
+        Some(w) => w.notified().await,
+        None => std::future::pending().await,
+    }
 }
 
 async fn wait_for_shutdown_signal() {
