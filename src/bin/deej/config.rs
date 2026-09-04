@@ -7,7 +7,7 @@ use deej_rs::{
 };
 use notify_debouncer_full::{
     DebounceEventResult, Debouncer, RecommendedCache, new_debouncer,
-    notify::{ErrorKind, EventKind, RecommendedWatcher, RecursiveMode},
+    notify::{EventKind, RecommendedWatcher, RecursiveMode},
 };
 use serde::Deserialize;
 use tokio::sync;

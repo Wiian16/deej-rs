@@ -1,9 +1,6 @@
 use std::sync::Arc;
 
-use tokio::{
-    signal::unix::{SignalKind, signal},
-    sync::watch,
-};
+use tokio::sync::watch;
 use tokio_util::sync::CancellationToken;
 
 use crate::{
