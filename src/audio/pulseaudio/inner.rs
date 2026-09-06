@@ -58,7 +58,7 @@ impl Drop for PulseInner {
 }
 
 pub enum Command {
-    Run(Box<dyn FnOnce(&mut Context) + Send + Sync>),
+    Run(Box<dyn FnOnce(&mut Context) + Send + 'static>),
     Shutdown,
     StateChanged,
 }
