@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use futures::future::join_all;
 use tokio::sync::watch;
 use tokio_util::sync::CancellationToken;
 
@@ -59,6 +60,7 @@ async fn process_frames(
         }
 
         let frame = rx.borrow_and_update().clone();
+        let mut futures = Vec::new();
         for (index, value) in smoother.update(&frame) {
             let Ok(index) = u8::try_from(index) else {
                 log::warn!("slider index {index} out of range, skipping");
@@ -70,9 +72,13 @@ async fn process_frames(
             };
 
             for target in targets {
-                if let Err(err) = adapter.set_volume(target, value).await {
-                    log::warn!("{err:#}");
-                }
+                futures.push(adapter.set_volume(target, value));
+            }
+        }
+
+        for result in join_all(futures).await {
+            if let Err(err) = result {
+                log::warn!("{err:#}");
             }
         }
     }
