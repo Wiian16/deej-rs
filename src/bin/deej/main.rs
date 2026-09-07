@@ -32,7 +32,9 @@ fn run() -> anyhow::Result<()> {
     let mut service_config = config::load(&config_path)?;
     log::debug!("loaded config: {service_config:#?}");
 
-    let runtime = tokio::runtime::Runtime::new()?;
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()?;
     runtime.block_on(async {
         let shutdown = CancellationToken::new();
         let cloned_shutdown = shutdown.clone();

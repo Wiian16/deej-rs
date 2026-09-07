@@ -15,6 +15,13 @@ serde = { version = "1.0.229", features = ["derive"] }
 serde-saphyr = "1.1.0"
 simplelog = "0.12.2"
 thiserror = "2.0.20"
-tokio = { version = "1.53.1", features = ["io-util", "macros", "rt-multi-thread", "signal", "sync", "time"] }
+tokio = { version = "1.53.1", features = [
+    "io-util",
+    "macros",
+    "rt",
+    "signal",
+    "sync",
+    "time",
+] }
 tokio-serial = "5.5.0"
 tokio-util = { version = "0.7.19", features = ["codec"] }
