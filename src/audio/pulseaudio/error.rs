@@ -28,6 +28,10 @@ pub enum PulseError {
     #[error("connection to the PulseAudio server failed or was refused")]
     ConnectionFailed,
 
+    /// A get by name query completed without producing an item.
+    #[error("the requested object was not found")]
+    NotFound,
+
     /// A `libpulse` operation failed by invoking the callback with it's "failure" state. This could be caused by a
     /// lookup for a non-existent index or name.
     #[error("the PulseAudio operation failed")]

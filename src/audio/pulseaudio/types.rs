@@ -4,7 +4,7 @@
 //! them and are tied to the worker thread that owns the `Context`. These types convert from inside the callback,
 //! before the data crosses the channel into the async task.
 
-use std::{collections::HashMap, fmt::DebugStruct};
+use std::collections::HashMap;
 
 use libpulse_binding::{
     channelmap,
@@ -28,6 +28,7 @@ fn proplist_to_hashmap(list: &Proplist) -> HashMap<String, String> {
 }
 
 /// A snapshot of a PulseAudio sink.
+#[allow(unused)]
 #[derive(Debug, Clone)]
 pub struct SinkInfo {
     /// The sink's numeric index. Stable for the lifetime of the sink.
@@ -105,6 +106,7 @@ impl From<&introspect::SinkInfo<'_>> for SinkInfo {
 /// A port belonging to a [`SinkInfo`] or [`SourceInfo`].
 ///
 /// `libpulse_binding` models sink ports and source ports as two distinct (but identical) types. This crate merges them.
+#[allow(unused)]
 #[derive(Debug, Clone)]
 pub struct DevicePort {
     /// The port's short, stable name.

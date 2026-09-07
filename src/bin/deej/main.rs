@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use clap::Parser;
-use deej_rs::audio::{AudioAdapter, DummyAudioAdapter, pulseaudio::PulseAudioAdapter};
+use deej_rs::audio::pulseaudio::PulseAudioAdapter;
 use log::error;
 use simplelog::{ColorChoice, ConfigBuilder, LevelFilter, TermLogger, TerminalMode};
 use tokio::signal::unix::{SignalKind, signal};
@@ -32,7 +32,6 @@ fn run() -> anyhow::Result<()> {
     let mut service_config = config::load(&config_path)?;
     log::debug!("loaded config: {service_config:#?}");
 
-    let adapter: Arc<dyn AudioAdapter> = Arc::new(DummyAudioAdapter);
     let runtime = tokio::runtime::Runtime::new()?;
     runtime.block_on(async {
         let shutdown = CancellationToken::new();
@@ -54,8 +53,8 @@ fn run() -> anyhow::Result<()> {
         };
 
         'outer: loop {
-            let _pulse_adapter = PulseAudioAdapter::new().await?;
-            
+            let adapter = Arc::new(PulseAudioAdapter::new().await?);
+
             let service_token = shutdown.child_token();
             let mut service = tokio::spawn(deej_rs::service::run(
                 service_config.clone(),

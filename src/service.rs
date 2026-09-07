@@ -48,7 +48,7 @@ async fn process_frames(
             changed = rx.changed() => {
                 if changed.is_err() {
                     if shutdown.is_cancelled() {
-                    log::error!("serial channel closed unexpectedly");
+                        log::error!("serial channel closed unexpectedly");
                     }
                     else {
                         log::debug!("serial channel closed during shutdown")
