@@ -52,6 +52,9 @@ async fn connect_and_stream(
     // reading. Currently. this project is focusing on supporting Linux first, so this functionality is not being
     // prioritized. In the Go version of Deej, it seems that the serial reader uses a very similar mechanism, but it is
     // much cheaper to block on Go routines than on tokio tasks.
+    //
+    // Note update since moving to single-threaded runtime: If implementing a blocking version of this for windows
+    // compatibility, more threads will be needed to stop this task from blocking the entire runtime.
     let port = tokio_serial::new(port_name, baud_rate).open_native_async()?;
     log::info!("connected to {port_name} @ {baud_rate} baud");
 
