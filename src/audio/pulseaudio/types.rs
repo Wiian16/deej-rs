@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use libpulse_binding::{
     channelmap,
     context::introspect,
-    def::{PortAvailable, SinkFlagSet, SinkState},
+    def::{PortAvailable, SinkFlagSet, SinkState, SourceFlagSet, SourceState},
     proplist::Proplist,
     sample,
     time::MicroSeconds,
@@ -126,6 +126,93 @@ impl From<&introspect::SinkPortInfo<'_>> for DevicePort {
             description: port.description.as_ref().map(|c| c.to_string()),
             priority: port.priority,
             available: port.available,
+        }
+    }
+}
+
+impl From<&introspect::SourcePortInfo<'_>> for DevicePort {
+    fn from(p: &introspect::SourcePortInfo<'_>) -> Self {
+        DevicePort {
+            name: p.name.as_ref().map(|c| c.to_string()),
+            description: p.description.as_ref().map(|c| c.to_string()),
+            priority: p.priority,
+            available: p.available,
+        }
+    }
+}
+
+/// A snapshot of a PulseAudio source.
+#[allow(unused)]
+#[derive(Debug, Clone)]
+pub struct SourceInfo {
+    /// The source's numeric index. Stable for the lifetime of the source, reusable afterwards.
+    pub index: u32,
+    /// The sources's short, stable name.
+    pub name: Option<String>,
+    /// The source's human-readable description
+    pub description: Option<String>,
+    /// The sample format, rate, and channel count the source is running at.
+    pub sample_spec: sample::Spec,
+    /// The mapping from channel index to microphone/position.
+    pub channel_map: channelmap::Map,
+    /// Index of the module that owns this source, if any.
+    pub owner_module: Option<u32>,
+    /// Per-channel volume.
+    pub volume: ChannelVolumes,
+    /// Whether the source is muted.
+    pub mute: bool,
+    /// If this is a monitor source, the index of the sink it monitors.
+    pub monitor_of_sink: Option<u32>,
+    /// If this is a monitor source, the name of the sink it monitors.
+    pub monitor_of_sink_name: Option<String>,
+    /// Length of the source's filled record buffer.
+    pub latency: MicroSeconds,
+    /// Name of the driver backing this source.
+    pub driver: Option<String>,
+    /// Source capability flags.
+    pub flags: SourceFlagSet,
+    /// the source's property list, flattened to owned strings.
+    pub properties: HashMap<String, String>,
+    /// The latency the source has actually been configured to.
+    pub configured_latency: MicroSeconds,
+    /// the "base" (unamplified/unattenuated) volume of the source.
+    pub base_volume: Volume,
+    /// The source's current running state.
+    pub state: SourceState,
+    /// Number of discrete volume steps, for sources that don't support arbitrary volumes.
+    pub n_volume_steps: u32,
+    /// Index of the card that owns this source, if any.
+    pub card: Option<u32>,
+    /// The set of ports available on this source.
+    pub ports: Vec<DevicePort>,
+    /// The currently active port, if any.
+    pub active_port: Option<DevicePort>,
+}
+
+impl From<&introspect::SourceInfo<'_>> for SourceInfo {
+    fn from(info: &introspect::SourceInfo<'_>) -> Self {
+        SourceInfo {
+            index: info.index,
+            name: info.name.as_ref().map(|c| c.to_string()),
+            description: info.description.as_ref().map(|c| c.to_string()),
+            sample_spec: info.sample_spec,
+            channel_map: info.channel_map,
+            owner_module: info.owner_module,
+            volume: info.volume,
+            mute: info.mute,
+            monitor_of_sink: info.monitor_of_sink,
+            monitor_of_sink_name: info.monitor_of_sink_name.as_ref().map(|c| c.to_string()),
+            latency: info.latency,
+            driver: info.driver.as_ref().map(|c| c.to_string()),
+            flags: info.flags,
+            properties: proplist_to_hashmap(&info.proplist),
+            configured_latency: info.configured_latency,
+            base_volume: info.base_volume,
+            state: info.state,
+            n_volume_steps: info.n_volume_steps,
+            card: info.card,
+            ports: info.ports.iter().map(DevicePort::from).collect(),
+            active_port: info.active_port.as_deref().map(DevicePort::from),
         }
     }
 }

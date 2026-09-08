@@ -3,7 +3,11 @@ use libpulse_binding::volume::Volume;
 
 use crate::audio::{
     AudioAdapter, AudioAdapterError, NormalizedVolume, VolumeTarget,
-    pulseaudio::{error::PulseError, types::SinkInfo, wrapper::PulseWrapper},
+    pulseaudio::{
+        error::PulseError,
+        types::{SinkInfo, SourceInfo},
+        wrapper::PulseWrapper,
+    },
     volume_registry::VolumeRegistry,
 };
 
@@ -37,6 +41,7 @@ impl AudioAdapter for PulseAudioAdapter {
         self.registry.register(target.clone(), volume);
 
         match target {
+            // TODO: currently returns Err on any sink/source failing, should finish the rest of them before returning
             &VolumeTarget::Master => {
                 let sinks: Vec<SinkInfo> = self
                     .wrapper
@@ -52,6 +57,27 @@ impl AudioAdapter for PulseAudioAdapter {
 
                     self.wrapper
                         .set_sink_volume(index, volumes)
+                        .await
+                        .map_err(|err| AudioAdapterError::new(target.clone(), err))?;
+                }
+
+                Ok(())
+            }
+            &VolumeTarget::Mic => {
+                let sources: Vec<SourceInfo> = self
+                    .wrapper
+                    .list_sources()
+                    .await
+                    .map_err(|err| AudioAdapterError::new(target.clone(), err))?;
+                let target_volume: Volume = volume.into();
+
+                for source in sources {
+                    let index = source.index;
+                    let mut volumes = source.volume;
+                    volumes.set(volumes.len(), target_volume);
+
+                    self.wrapper
+                        .set_source_volume(index, volumes)
                         .await
                         .map_err(|err| AudioAdapterError::new(target.clone(), err))?;
                 }

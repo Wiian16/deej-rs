@@ -6,7 +6,7 @@ use tokio::sync::oneshot;
 use crate::audio::pulseaudio::{
     error::PulseError,
     inner::{Command, PulseInner},
-    types::SinkInfo,
+    types::{SinkInfo, SourceInfo},
 };
 
 /// Expands to a `move` closure that collects every `ListResult::Item` into a `Vec` (converting it via `From`) and
@@ -104,6 +104,28 @@ impl PulseWrapper {
     ) -> Result<(), PulseError> {
         self.run(move |ctx, tx| {
             let _ = ctx.introspect().set_sink_volume_by_index(
+                index,
+                &volume,
+                Some(success_callback(tx)),
+            );
+        })
+        .await
+    }
+
+    pub async fn list_sources(&self) -> Result<Vec<SourceInfo>, PulseError> {
+        self.run(|ctx, tx| {
+            ctx.introspect().get_source_info_list(list_collector!(tx));
+        })
+        .await
+    }
+
+    pub async fn set_source_volume(
+        &self,
+        index: u32,
+        volume: ChannelVolumes,
+    ) -> Result<(), PulseError> {
+        self.run(move |ctx, tx| {
+            let _ = ctx.introspect().set_source_volume_by_index(
                 index,
                 &volume,
                 Some(success_callback(tx)),
