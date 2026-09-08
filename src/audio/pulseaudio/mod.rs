@@ -4,6 +4,7 @@ use libpulse_binding::volume::Volume;
 use crate::audio::{
     AudioAdapter, AudioAdapterError, NormalizedVolume, VolumeTarget,
     pulseaudio::{error::PulseError, types::SinkInfo, wrapper::PulseWrapper},
+    volume_registry::VolumeRegistry,
 };
 
 mod error;
@@ -14,12 +15,14 @@ mod wrapper;
 #[derive(Clone)]
 pub struct PulseAudioAdapter {
     wrapper: PulseWrapper,
+    registry: VolumeRegistry,
 }
 
 impl PulseAudioAdapter {
     pub async fn new() -> Result<Self, PulseError> {
         Ok(Self {
             wrapper: PulseWrapper::new("deej-pulseaudio-adapter".into()).await?,
+            registry: VolumeRegistry::new(),
         })
     }
 }
@@ -31,6 +34,8 @@ impl AudioAdapter for PulseAudioAdapter {
         target: &VolumeTarget,
         volume: NormalizedVolume,
     ) -> Result<(), AudioAdapterError> {
+        self.registry.register(target.clone(), volume);
+
         match target {
             &VolumeTarget::Master => {
                 let sinks: Vec<SinkInfo> = self

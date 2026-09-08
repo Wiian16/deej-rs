@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use core::fmt;
 
 pub mod pulseaudio;
+pub mod volume_registry;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum VolumeTarget {
