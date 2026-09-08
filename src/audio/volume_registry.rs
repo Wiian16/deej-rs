@@ -157,3 +157,142 @@ impl Default for VolumeRegistryInner {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::thread;
+
+    use super::*;
+
+    #[test]
+    fn test_register_master() {
+        let mut registry = VolumeRegistryInner::new();
+
+        assert_eq!(registry.master, None, "Master volume should start as None");
+
+        registry.register(VolumeTarget::Master, NormalizedVolume::clamped(1.0));
+        assert_eq!(
+            registry.master,
+            Some(NormalizedVolume::clamped(1.0)),
+            "Master should be set to 1.0"
+        );
+
+        registry.register(VolumeTarget::Master, NormalizedVolume::clamped(0.0));
+        assert_eq!(
+            registry.master,
+            Some(NormalizedVolume::clamped(0.0)),
+            "Master should be set to 0.0"
+        );
+    }
+
+    #[test]
+    fn test_register_mic() {
+        let mut registry = VolumeRegistryInner::new();
+
+        assert_eq!(registry.mic, None, "Mic volume should start as None");
+
+        registry.register(VolumeTarget::Mic, NormalizedVolume::clamped(1.0));
+        assert_eq!(
+            registry.mic,
+            Some(NormalizedVolume::clamped(1.0)),
+            "Mic should be set to 1.0"
+        );
+
+        registry.register(VolumeTarget::Mic, NormalizedVolume::clamped(0.0));
+        assert_eq!(
+            registry.mic,
+            Some(NormalizedVolume::clamped(0.0)),
+            "Mic should be set to 0.0"
+        );
+    }
+
+    #[test]
+    fn test_register_unmapped() {
+        let mut registry = VolumeRegistryInner::new();
+
+        assert_eq!(
+            registry.unmapped, None,
+            "Unmapped volume should start as None"
+        );
+
+        registry.register(VolumeTarget::Unmapped, NormalizedVolume::clamped(1.0));
+        assert_eq!(
+            registry.unmapped,
+            Some(NormalizedVolume::clamped(1.0)),
+            "Unmapped should be set to 1.0"
+        );
+
+        registry.register(VolumeTarget::Unmapped, NormalizedVolume::clamped(0.0));
+        assert_eq!(
+            registry.unmapped,
+            Some(NormalizedVolume::clamped(0.0)),
+            "Unmapped should be set to 0.0"
+        );
+    }
+
+    #[test]
+    fn test_register_process() {
+        let mut registry = VolumeRegistryInner::new();
+
+        assert_eq!(
+            registry.process_map.len(),
+            0,
+            "Process map should start empty"
+        );
+
+        registry.register(
+            VolumeTarget::Process("process1".into()),
+            NormalizedVolume::clamped(1.0),
+        );
+        assert_eq!(
+            registry.process_map.len(),
+            1,
+            "Process map should have 1 entry"
+        );
+        assert_eq!(
+            registry.process_map.get("process1"),
+            Some(&NormalizedVolume::clamped(1.0)),
+            "'process1' should be set to 1.0"
+        );
+
+        registry.register(
+            VolumeTarget::Process("process2".into()),
+            NormalizedVolume::clamped(1.0),
+        );
+        assert_eq!(
+            registry.process_map.len(),
+            2,
+            "Process map should have 2 entries"
+        );
+        assert_eq!(
+            registry.process_map.get("process1"),
+            Some(&NormalizedVolume::clamped(1.0)),
+            "'process1' volume should not have changed"
+        );
+        assert_eq!(
+            registry.process_map.get("process2"),
+            Some(&NormalizedVolume::clamped(1.0)),
+            "'process2' should be set to 1.0"
+        );
+
+        registry.register(
+            VolumeTarget::Process("process2".into()),
+            NormalizedVolume::clamped(0.0),
+        );
+        assert_eq!(
+            registry.process_map.len(),
+            2,
+            "Process map should have 2 entries"
+        );
+        assert_eq!(
+            registry.process_map.get("process1"),
+            Some(&NormalizedVolume::clamped(1.0)),
+            "'process1' volume should not have changed"
+        );
+        assert_eq!(
+            registry.process_map.get("process2"),
+            Some(&NormalizedVolume::clamped(0.0)),
+            "'process2' should be set to 0.0"
+        );
+    }
+}
