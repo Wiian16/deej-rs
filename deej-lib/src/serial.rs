@@ -14,7 +14,7 @@ const MAX_ADC_VALUE: u16 = 1023;
 const RECONNECT_DELAY: Duration = Duration::from_secs(2);
 
 pub async fn run(
-    port_name: String,
+    port_name: Box<str>,
     baud_rate: u32,
     invert: bool,
     tx: watch::Sender<SliderFrame>,

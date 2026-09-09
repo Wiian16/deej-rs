@@ -8,7 +8,7 @@ use crate::audio::VolumeTarget;
 pub struct ServiceConfig {
     pub slider_mapping: HashMap<u8, Vec<VolumeTarget>>,
     pub invert_sliders: bool,
-    pub com_port: String,
+    pub com_port: Box<str>,
     pub baud_rate: u32,
     pub noise_reduction: NoiseReduction,
 }

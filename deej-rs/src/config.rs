@@ -22,7 +22,7 @@ pub fn load(path: impl AsRef<std::path::Path>) -> Result<ServiceConfig, ConfigEr
 pub struct RawConfig {
     slider_mapping: HashMap<u8, RawSliderMapping>,
     invert_sliders: bool,
-    com_port: String,
+    com_port: Box<str>,
     baud_rate: u32,
     noise_reduction: RawNoiseReduction,
 }
@@ -64,8 +64,8 @@ impl From<RawNoiseReduction> for NoiseReduction {
 #[derive(Debug, Deserialize, Eq, PartialEq)]
 #[serde(untagged)]
 pub enum RawSliderMapping {
-    Target(String),
-    Targets(Vec<String>),
+    Target(Box<str>),
+    Targets(Vec<Box<str>>),
 }
 
 impl From<RawSliderMapping> for Vec<VolumeTarget> {
@@ -132,7 +132,7 @@ impl ConfigWatcher {
     }
 }
 
-fn resolve_special(name: String) -> VolumeTarget {
+fn resolve_special(name: Box<str>) -> VolumeTarget {
     if name.eq_ignore_ascii_case("master") {
         VolumeTarget::Master
     } else if name.eq_ignore_ascii_case("mic") {
@@ -226,29 +226,29 @@ noise_reduction: default
 
         assert_eq!(
             config.slider_mapping.get(&1).unwrap(),
-            &[VolumeTarget::Process("chrome.exe".to_string())]
+            &[VolumeTarget::Process("chrome.exe".into())]
         );
 
         assert_eq!(
             config.slider_mapping.get(&2).unwrap(),
-            &[VolumeTarget::Process("spotify.exe".to_string())]
+            &[VolumeTarget::Process("spotify.exe".into())]
         );
 
         assert_eq!(
             config.slider_mapping.get(&3).unwrap(),
             &[
-                VolumeTarget::Process("pathofexile_x64.exe".to_string()),
-                VolumeTarget::Process("rocketleague.exe".to_string()),
+                VolumeTarget::Process("pathofexile_x64.exe".into()),
+                VolumeTarget::Process("rocketleague.exe".into()),
             ]
         );
 
         assert_eq!(
             config.slider_mapping.get(&4).unwrap(),
-            &[VolumeTarget::Process("discord.exe".to_string())]
+            &[VolumeTarget::Process("discord.exe".into())]
         );
 
         assert!(!config.invert_sliders);
-        assert_eq!(config.com_port, "COM4");
+        assert_eq!(config.com_port, "COM4".into());
         assert_eq!(config.baud_rate, 9600);
         assert!(matches!(config.noise_reduction, NoiseReduction::Default));
     }

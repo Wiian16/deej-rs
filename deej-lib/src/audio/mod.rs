@@ -8,7 +8,7 @@ pub mod volume_registry;
 pub enum VolumeTarget {
     Master,
     Mic,
-    Process(String),
+    Process(Box<str>),
     Unmapped,
 }
 

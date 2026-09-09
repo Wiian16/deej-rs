@@ -82,7 +82,7 @@ impl Default for VolumeRegistry {
 
 #[derive(Debug)]
 struct VolumeRegistryInner {
-    process_map: HashMap<String, NormalizedVolume>,
+    process_map: HashMap<Box<str>, NormalizedVolume>,
     master: Option<NormalizedVolume>,
     mic: Option<NormalizedVolume>,
     unmapped: Option<NormalizedVolume>,
