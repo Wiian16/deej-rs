@@ -12,7 +12,7 @@ use libpulse_binding::{
 };
 use tokio::sync::oneshot;
 
-use crate::audio::pulseaudio::error::PulseError;
+use crate::error::PulseError;
 
 /// A handle for communicating into the background worker thread that owns the `libpulse` mainloop and context.
 ///

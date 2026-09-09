@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use clap::Parser;
-use deej_rs::audio::pulseaudio::PulseAudioAdapter;
+use deej_lib::audio::pulseaudio::PulseAudioAdapter;
 use log::error;
 use simplelog::{ColorChoice, ConfigBuilder, LevelFilter, TermLogger, TerminalMode};
 use tokio::signal::unix::{SignalKind, signal};
@@ -58,7 +58,7 @@ fn run() -> anyhow::Result<()> {
             let adapter = Arc::new(PulseAudioAdapter::new().await?);
 
             let service_token = shutdown.child_token();
-            let mut service = tokio::spawn(deej_rs::service::run(
+            let mut service = tokio::spawn(deej_lib::service::run(
                 service_config.clone(),
                 adapter.clone(),
                 service_token.clone(),

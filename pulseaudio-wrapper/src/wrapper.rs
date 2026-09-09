@@ -3,7 +3,7 @@ use std::sync::Arc;
 use libpulse_binding::{callbacks::ListResult, context::Context, volume::ChannelVolumes};
 use tokio::sync::oneshot;
 
-use crate::audio::pulseaudio::{
+use crate::{
     error::PulseError,
     inner::{Command, PulseInner},
     types::{SinkInfo, SourceInfo},
@@ -58,7 +58,7 @@ macro_rules! single_collector {
 /// `PulseWrapper` is cheap to [`Clone`] (it's just an `Arc` around a channel to the worker thread), so it's fine to
 /// share across tasks. The connection is closed automatically and the thread is joined when the last clone is dropped.
 #[derive(Clone)]
-pub(crate) struct PulseWrapper {
+pub struct PulseWrapper {
     inner: Arc<PulseInner>,
 }
 

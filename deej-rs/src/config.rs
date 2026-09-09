@@ -1,7 +1,7 @@
 use core::fmt;
 use std::{collections::HashMap, io, sync::Arc, time::Duration};
 
-use deej_rs::{
+use deej_lib::{
     audio::VolumeTarget,
     config::{NoiseReduction, ServiceConfig},
 };

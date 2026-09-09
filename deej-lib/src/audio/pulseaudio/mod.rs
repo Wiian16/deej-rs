@@ -1,20 +1,14 @@
 use async_trait::async_trait;
 use libpulse_binding::volume::Volume;
+use pulseaudio_wrapper::{
+    PulseError, PulseWrapper,
+    types::{SinkInfo, SourceInfo},
+};
 
 use crate::audio::{
     AudioAdapter, AudioAdapterError, NormalizedVolume, VolumeTarget,
-    pulseaudio::{
-        error::PulseError,
-        types::{SinkInfo, SourceInfo},
-        wrapper::PulseWrapper,
-    },
     volume_registry::VolumeRegistry,
 };
-
-mod error;
-mod inner;
-mod types;
-mod wrapper;
 
 #[derive(Clone)]
 pub struct PulseAudioAdapter {
