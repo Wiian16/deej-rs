@@ -6,11 +6,11 @@ use std::{
     thread::{self, JoinHandle},
 };
 
+use futures::channel::oneshot;
 use libpulse_binding::{
     context::{Context, FlagSet, State},
     mainloop::threaded::Mainloop,
 };
-use tokio::sync::oneshot;
 
 use crate::error::PulseError;
 

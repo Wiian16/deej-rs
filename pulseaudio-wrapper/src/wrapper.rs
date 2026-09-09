@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
+use futures::channel::oneshot;
 use libpulse_binding::{callbacks::ListResult, context::Context, volume::ChannelVolumes};
-use tokio::sync::oneshot;
 
 use crate::{
     error::PulseError,

@@ -693,10 +693,10 @@ dependencies = [
 name = "pulseaudio-wrapper"
 version = "0.1.0"
 dependencies = [
+ "futures",
  "libpulse-binding",
  "log",
  "thiserror",
- "tokio",
 ]
 
 [[package]]
