@@ -4,17 +4,30 @@
 //! them and are tied to the worker thread that owns the `Context`. These types convert from inside the callback,
 //! before the data crosses the channel into the async task.
 
+/// Re-export of [`libpulse_binding::channelmap::Map`].
+pub use libpulse_binding::channelmap::Map as ChannelMap;
+/// Re-export of [`libpulse_binding::def::PortAvailable`]
+pub use libpulse_binding::def::PortAvailable;
+/// Re-export of [`libpulse_binding::def::SinkFlagSet`]
+pub use libpulse_binding::def::SinkFlagSet;
+/// Re-export of [`libpulse_binding::def::SinkState`]
+pub use libpulse_binding::def::SinkState;
+/// Re-export of [`libpulse_binding::def::SourceFlagSet`]
+pub use libpulse_binding::def::SourceFlagSet;
+/// Re-export of [`libpulse_binding::def::SourceState`]
+pub use libpulse_binding::def::SourceState;
+/// Re-export of [`libpulse_binding::sample::Spec`].
+pub use libpulse_binding::sample::Spec as SampleSpec;
+/// Re-export of [`libpulse_binding::time::MicroSeconds`].
+pub use libpulse_binding::time::MicroSeconds;
+/// Re-export of [`libpulse_binding::volume::ChannelVolumes`].
+pub use libpulse_binding::volume::ChannelVolumes;
+/// Re-export of [`libpulse_binding::volume::Volume`].
+pub use libpulse_binding::volume::Volume;
+
 use std::collections::HashMap;
 
-use libpulse_binding::{
-    channelmap,
-    context::introspect,
-    def::{PortAvailable, SinkFlagSet, SinkState, SourceFlagSet, SourceState},
-    proplist::Proplist,
-    sample,
-    time::MicroSeconds,
-    volume::{ChannelVolumes, Volume},
-};
+use libpulse_binding::{context::introspect, proplist::Proplist};
 
 /// Turns a property list into a plain owned map. Non-UTF8 values are dropped rather than exposing `libpulse`'s
 /// borrowed/raw representation to callers.
@@ -38,9 +51,9 @@ pub struct SinkInfo {
     /// The sink's human-readable description.
     pub description: Option<String>,
     /// The sample format, rate, and channel count the sink is running at.
-    pub sample_spec: sample::Spec,
+    pub sample_spec: SampleSpec,
     /// The mapping from channel index to speaker position.
-    pub channel_map: channelmap::Map,
+    pub channel_map: ChannelMap,
     /// Index of the module that owns this sink, if any.
     pub owner_module: Option<u32>,
     /// Per-channel volume.
@@ -152,9 +165,9 @@ pub struct SourceInfo {
     /// The source's human-readable description
     pub description: Option<String>,
     /// The sample format, rate, and channel count the source is running at.
-    pub sample_spec: sample::Spec,
+    pub sample_spec: SampleSpec,
     /// The mapping from channel index to microphone/position.
-    pub channel_map: channelmap::Map,
+    pub channel_map: ChannelMap,
     /// Index of the module that owns this source, if any.
     pub owner_module: Option<u32>,
     /// Per-channel volume.
