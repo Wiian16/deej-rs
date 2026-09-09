@@ -1,6 +1,6 @@
 use std::cell::LazyCell;
 
-use deej_rs::audio::{NormalizedVolume, VolumeTarget, volume_registry::VolumeRegistry};
+use deej_lib::audio::{NormalizedVolume, VolumeTarget, volume_registry::VolumeRegistry};
 
 const PROCESS1: &'static str = "process1";
 const PROCESS2: &'static str = "process2";
