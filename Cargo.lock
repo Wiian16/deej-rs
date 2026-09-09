@@ -203,7 +203,6 @@ dependencies = [
  "anyhow",
  "async-trait",
  "futures",
- "libpulse-binding",
  "log",
  "pulseaudio-wrapper",
  "tokio",

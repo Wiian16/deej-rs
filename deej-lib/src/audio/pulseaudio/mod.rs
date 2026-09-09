@@ -1,8 +1,7 @@
 use async_trait::async_trait;
-use libpulse_binding::volume::Volume;
 use pulseaudio_wrapper::{
     PulseError, PulseWrapper,
-    types::{SinkInfo, SourceInfo},
+    types::{SinkInfo, SourceInfo, Volume},
 };
 
 use crate::audio::{
