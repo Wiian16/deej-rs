@@ -11,11 +11,12 @@ use crate::{
     slider::{SliderFrame, SliderSmoother},
 };
 
+/// Spawn and run all main deej tasks.
 pub async fn run(
     config: ServiceConfig,
     adapter: Arc<dyn AudioAdapter>,
     shutdown: CancellationToken,
-) -> anyhow::Result<()> {
+) {
     let (tx, rx) = watch::channel(SliderFrame::new());
 
     let serial_task = tokio::spawn(serial::run(
@@ -31,7 +32,6 @@ pub async fn run(
     shutdown.cancelled().await;
 
     let _ = tokio::join!(serial_task, processing_task);
-    Ok(())
 }
 
 async fn process_frames(
@@ -45,14 +45,14 @@ async fn process_frames(
     loop {
         tokio::select! {
             biased;
-            _ = shutdown.cancelled() => break,
+            () = shutdown.cancelled() => break,
             changed = rx.changed() => {
                 if changed.is_err() {
                     if shutdown.is_cancelled() {
                         log::error!("serial channel closed unexpectedly");
                     }
                     else {
-                        log::debug!("serial channel closed during shutdown")
+                        log::debug!("serial channel closed during shutdown");
                     }
                     break;
                 }

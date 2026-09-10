@@ -6,9 +6,11 @@ use crate::{audio::NormalizedVolume, config::NoiseReduction};
 pub type SliderFrame = Vec<NormalizedVolume>;
 
 /// Parses a raw serial line like `401|410|517|561|612` into normalized slider values.
+///
 /// `max_value` is the firmware's max raw ADC reading (1023, for a 10-bit Arduino ADC).
 /// Returns 'None' for lines that don't look like a slider frame (power-up, noise, stray
 /// firmware debug output, etc.) rather than erroring.
+#[must_use]
 pub fn parse_line(line: &str, max_value: u16, invert: bool) -> Option<SliderFrame> {
     let line = line.trim();
     if line.is_empty() {
@@ -31,6 +33,7 @@ pub fn parse_line(line: &str, max_value: u16, invert: bool) -> Option<SliderFram
 }
 
 /// Smooths noisy analog readings with a moving average and suppresses updates too small to matter.
+///
 /// `window` controls the moving-average size; `epsilon` is the minimum change (in normalized units)
 /// required before a slider is reported as moved.
 pub struct SliderSmoother {
@@ -41,7 +44,8 @@ pub struct SliderSmoother {
 }
 
 impl SliderSmoother {
-    pub fn new(reduction: NoiseReduction) -> Self {
+    #[must_use]
+    pub const fn new(reduction: NoiseReduction) -> Self {
         let (window, epsilon) = match reduction {
             NoiseReduction::Low => (4, 0.003),
             NoiseReduction::Default => (8, 0.01),
@@ -59,6 +63,10 @@ impl SliderSmoother {
     /// Feeds a raw frame in, returns `(index, value)` for sliders that moved enough
     /// to be worth acting on. Frame length may grow between calls (e.g. firs frame
     /// arrives before we know the slider count); it should not shrink.
+    ///
+    /// # Panics
+    ///
+    /// May panic if resizing the internal buffers fails to grow them to the size of the received buffer.
     pub fn update(&mut self, frame: &SliderFrame) -> Vec<(usize, NormalizedVolume)> {
         if self.history.len() < frame.len() {
             self.history
@@ -68,20 +76,35 @@ impl SliderSmoother {
 
         let mut changed = Vec::new();
         for (i, &raw) in frame.iter().enumerate() {
-            let buf = &mut self.history[i];
+            #[allow(clippy::expect_used)]
+            let buf = self
+                .history
+                .get_mut(i)
+                .expect("received frame should never be larger than history");
             if buf.len() == self.window {
                 buf.pop_front();
             }
             buf.push_back(raw.get());
 
+            #[allow(clippy::cast_precision_loss, clippy::as_conversions)]
             let smoothed = NormalizedVolume::clamped(buf.iter().sum::<f32>() / buf.len() as f32);
-            let moved = match self.last_emitted[i] {
+            #[allow(clippy::expect_used)]
+            let moved = match self
+                .last_emitted
+                .get(i)
+                .expect("last emitted buffer should never be smaller than received frame")
+            {
                 None => true,
                 Some(prev) => (smoothed.get() - prev.get()).abs() > self.epsilon,
             };
 
+            #[allow(clippy::expect_used)]
             if moved {
-                self.last_emitted[i] = Some(smoothed);
+                *self
+                    .last_emitted
+                    .get_mut(i)
+                    .expect("last emitted buffer should never be smaller than received frame") =
+                    Some(smoothed);
                 changed.push((i, smoothed));
             }
         }

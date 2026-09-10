@@ -17,6 +17,7 @@ pub struct VolumeRegistry {
 }
 
 impl VolumeRegistry {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             inner: Arc::new(Mutex::new(VolumeRegistryInner::new())),
@@ -27,11 +28,21 @@ impl VolumeRegistry {
     ///
     /// For processes: return None if there is no volume set for the process and there is no unmapped volume set. For
     /// other types: return None if there is no volume set.
+    ///
+    /// # Panics
+    ///
+    /// Will panic if the internal mutex is poisoned. See [poisoning](Mutex#poisoning).
+    #[must_use]
     pub fn resolve(&self, target: &VolumeTarget) -> Option<NormalizedVolume> {
         self.inner.lock().expect("poisoned mutex").resolve(target)
     }
 
     /// Resolve a process volume, falling back to unmapped if it isn't registered.
+    ///
+    /// # Panics
+    ///
+    /// Will panic if the internal mutex is poisoned. See [poisoning](Mutex#poisoning).
+    #[must_use]
     pub fn resolve_process(&self, process: &str) -> Option<NormalizedVolume> {
         self.inner
             .lock()
@@ -42,6 +53,11 @@ impl VolumeRegistry {
     /// Resolve a volume into a registered volume without falling back to unmapped for processes.
     ///
     /// If there is no registered volume for a process, `None` will be returned, not the value for unmapped.
+    ///
+    /// # Panics
+    ///
+    /// Will panic if the internal mutex is poisoned. See [poisoning](Mutex#poisoning).
+    #[must_use]
     pub fn resolve_exact(&self, target: &VolumeTarget) -> Option<NormalizedVolume> {
         self.inner
             .lock()
@@ -50,6 +66,11 @@ impl VolumeRegistry {
     }
 
     /// Resolve a process volume, returns `None` if it isn't registered.
+    ///
+    /// # Panics
+    ///
+    /// Will panic if the internal mutex is poisoned. See [poisoning](Mutex#poisoning).
+    #[must_use]
     pub fn resolve_process_exact(&self, process: &str) -> Option<NormalizedVolume> {
         self.inner
             .lock()
@@ -58,6 +79,10 @@ impl VolumeRegistry {
     }
 
     /// Register a volume with the registry.
+    ///
+    /// # Panics
+    ///
+    /// Will panic if the internal mutex is poisoned. See [poisoning](Mutex#poisoning).
     pub fn register(&self, target: VolumeTarget, volume: NormalizedVolume) {
         self.inner
             .lock()
@@ -113,7 +138,7 @@ impl VolumeRegistryInner {
 
     /// Resolve a process volume, falling back to unmapped if it isn't registered.
     fn resolve_process(&self, process: &str) -> Option<NormalizedVolume> {
-        let mapped = self.process_map.get(process).cloned();
+        let mapped = self.process_map.get(process).copied();
 
         if mapped.is_some() {
             return mapped;
@@ -136,7 +161,7 @@ impl VolumeRegistryInner {
 
     /// Resolve a process volume, returns `None` if it isn't registered.
     fn resolve_process_exact(&self, process: &str) -> Option<NormalizedVolume> {
-        self.process_map.get(process).cloned()
+        self.process_map.get(process).copied()
     }
 
     /// Register a volume with the registry.
@@ -148,7 +173,7 @@ impl VolumeRegistryInner {
                 let _ = self.process_map.insert(name, volume);
             }
             VolumeTarget::Unmapped => self.unmapped = Some(volume),
-        };
+        }
     }
 }
 

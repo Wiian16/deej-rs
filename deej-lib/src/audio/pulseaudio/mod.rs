@@ -16,6 +16,11 @@ pub struct PulseAudioAdapter {
 }
 
 impl PulseAudioAdapter {
+    /// Creates a new `PulseAudioAdapter`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PulseError`] if there is an error in the creation of the `PulseAudio` service.
     pub async fn new() -> Result<Self, PulseError> {
         Ok(Self {
             wrapper: PulseWrapper::new("deej-pulseaudio-adapter".into()).await?,
@@ -87,6 +92,12 @@ impl AudioAdapter for PulseAudioAdapter {
 
 impl From<NormalizedVolume> for Volume {
     fn from(val: NormalizedVolume) -> Self {
-        Volume((val.0 * Volume::NORMAL.0 as f32).round() as u32)
+        #[allow(
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss,
+            clippy::cast_precision_loss,
+            clippy::as_conversions
+        )]
+        Self((val.0 * Self::NORMAL.0 as f32).round() as u32)
     }
 }

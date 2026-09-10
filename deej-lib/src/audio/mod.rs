@@ -64,6 +64,7 @@ impl NormalizedVolume {
     pub const MIN: Self = Self(0.0);
     pub const MAX: Self = Self(1.0);
 
+    #[must_use]
     pub fn new(value: f32) -> Option<Self> {
         if value.is_finite() && (0.0..=1.0).contains(&value) {
             Some(Self(value))
@@ -72,17 +73,19 @@ impl NormalizedVolume {
         }
     }
 
-    pub fn clamped(value: f32) -> Self {
+    #[must_use]
+    pub const fn clamped(value: f32) -> Self {
         Self(value.clamp(0.0, 1.0))
     }
 
-    pub fn get(self) -> f32 {
+    #[must_use]
+    pub const fn get(self) -> f32 {
         self.0
     }
 }
 
 impl From<NormalizedVolume> for f32 {
-    fn from(volume: NormalizedVolume) -> f32 {
+    fn from(volume: NormalizedVolume) -> Self {
         volume.0
     }
 }

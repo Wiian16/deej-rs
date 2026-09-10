@@ -58,7 +58,7 @@ fn run() -> anyhow::Result<()> {
             let adapter = Arc::new(PulseAudioAdapter::new().await?);
 
             let service_token = shutdown.child_token();
-            let mut service = tokio::spawn(deej_lib::service::run(
+            let service = tokio::spawn(deej_lib::service::run(
                 service_config.clone(),
                 adapter.clone(),
                 service_token.clone(),
@@ -84,10 +84,6 @@ fn run() -> anyhow::Result<()> {
                     _ = shutdown.cancelled() => {
                         let _ = service.await;
                         break 'outer;
-                    }
-                    result = &mut service => {
-                        // Service exited on it's own, propagate error
-                        return result?;
                     }
                 }
             }

@@ -22,19 +22,19 @@ pub async fn run(
 ) {
     while !shutdown.is_cancelled() {
         tokio::select! {
-            _ = shutdown.cancelled() => break,
+            () = shutdown.cancelled() => break,
             result = connect_and_stream(&port_name, baud_rate, invert, &tx, &shutdown) => {
                 if let Err(err) = result {
                     log::warn!(
                         "serial connection to {port_name} lost: {err:#}. Reconnecting in {RECONNECT_DELAY:?}"
-                    )
+                    );
                 }
             }
         }
 
         tokio::select! {
-            _ = shutdown.cancelled() => break,
-            _ = tokio::time::sleep(RECONNECT_DELAY) => {}
+            () = shutdown.cancelled() => break,
+            () = tokio::time::sleep(RECONNECT_DELAY) => {}
         }
     }
 }
@@ -61,7 +61,7 @@ async fn connect_and_stream(
     let mut lines = FramedRead::new(port, LinesCodec::new());
     loop {
         let next = tokio::select! {
-            _ = shutdown.cancelled() => return Ok(()),
+            () = shutdown.cancelled() => return Ok(()),
             next = lines.next() => next,
         };
 
@@ -70,7 +70,7 @@ async fn connect_and_stream(
                 if let Some(frame) = parse_line(&line, MAX_ADC_VALUE, invert) {
                     let _ = tx.send(frame); // Error here means shutting down, safe to ignore. 
                 } else {
-                    log::trace!("ignoring unparsable serial line: {line:?}")
+                    log::trace!("ignoring unparsable serial line: {line:?}");
                 }
             }
             Some(Err(err)) => anyhow::bail!(err),
