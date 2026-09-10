@@ -26,7 +26,10 @@ pub(crate) struct PulseInner {
 
 impl PulseInner {
     pub async fn new(name: String) -> Result<Arc<Self>, PulseError> {
-        let (cmd_tx, thread_handle, ready) = spawn(name)?;
+        let spawn_handle = spawn(name)?;
+        let cmd_tx = spawn_handle.cmd_tx;
+        let thread_handle = spawn_handle.thread_handle;
+        let ready = spawn_handle.ready_rx;
 
         ready.await.map_err(|_| PulseError::Disconnected)??;
 
@@ -63,16 +66,13 @@ pub enum Command {
     StateChanged,
 }
 
-fn spawn(
-    app_name: String,
-) -> Result<
-    (
-        mpsc::Sender<Command>,
-        JoinHandle<()>,
-        oneshot::Receiver<Result<(), PulseError>>,
-    ),
-    PulseError,
-> {
+pub(crate) struct SpawnHandle {
+    cmd_tx: mpsc::Sender<Command>,
+    thread_handle: JoinHandle<()>,
+    ready_rx: oneshot::Receiver<Result<(), PulseError>>,
+}
+
+fn spawn(app_name: String) -> Result<SpawnHandle, PulseError> {
     let (cmd_tx, cmd_rx) = mpsc::channel::<Command>();
     let (ready_tx, ready_rx) = oneshot::channel();
     let self_tx = cmd_tx.clone();
@@ -81,7 +81,11 @@ fn spawn(
         .name("pulseaudio-wrapper".to_string())
         .spawn(move || thread_main(app_name, self_tx, cmd_rx, ready_tx))?;
 
-    Ok((cmd_tx, thread_handle, ready_rx))
+    Ok(SpawnHandle {
+        cmd_tx,
+        thread_handle,
+        ready_rx,
+    })
 }
 
 fn thread_main(
