@@ -16,6 +16,8 @@ pub use libpulse_binding::def::SinkState;
 pub use libpulse_binding::def::SourceFlagSet;
 /// Re-export of [`libpulse_binding::def::SourceState`]
 pub use libpulse_binding::def::SourceState;
+/// Re-export of [`libpulse_binding::error::PAErr`].
+pub use libpulse_binding::error::PAErr;
 /// Re-export of [`libpulse_binding::sample::Spec`].
 pub use libpulse_binding::sample::Spec as SampleSpec;
 /// Re-export of [`libpulse_binding::time::MicroSeconds`].

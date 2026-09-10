@@ -1,4 +1,4 @@
-use libpulse_binding::error::PAErr;
+use crate::types::PAErr;
 
 #[derive(Debug, thiserror::Error)]
 pub enum PulseError {
