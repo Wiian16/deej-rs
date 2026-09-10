@@ -12,3 +12,22 @@ tokio-serial = "5.5.0"
 tokio-util = { version = "0.7.19", features = ["codec"] }
 anyhow = "1.0.104"
 log = "0.4.34"
+
+# Clippy config from https://www.namtao.com/rust-toolkit-2026/#clippy-config
+[lints.clippy]
+pedantic = { level = "deny", priority = -1 }
+nursery = { level = "deny", priority = -1 }
+# DENY PANICS
+unwrap_used = "deny"
+expect_used = "deny"
+indexing_slicing = "deny"
+arithmetic_side_effects = "deny"
+unreachable = "deny"
+unimplemented = "deny"
+unchecked_time_subtraction = "deny"
+todo = "deny"
+string_slice = "deny"
+panic_in_result_fn = "deny"
+panic = "deny"
+exit = "deny"
+as_conversions = "deny"
