@@ -103,11 +103,11 @@ impl VolumeRegistryInner {
     /// For processes: return None if there is no volume set for the process and there is no unmapped volume set. For
     /// other types: return None if there is no volume set.
     fn resolve(&self, target: &VolumeTarget) -> Option<NormalizedVolume> {
-        match target {
-            &VolumeTarget::Master => self.master,
-            &VolumeTarget::Mic => self.mic,
-            &VolumeTarget::Process(ref name) => self.resolve_process(name),
-            &VolumeTarget::Unmapped => self.unmapped,
+        match *target {
+            VolumeTarget::Master => self.master,
+            VolumeTarget::Mic => self.mic,
+            VolumeTarget::Process(ref name) => self.resolve_process(name),
+            VolumeTarget::Unmapped => self.unmapped,
         }
     }
 
@@ -126,11 +126,11 @@ impl VolumeRegistryInner {
     ///
     /// If there is no registered volume for a process, `None` will be returned, not the value for unmapped.
     fn resolve_exact(&self, target: &VolumeTarget) -> Option<NormalizedVolume> {
-        match target {
-            &VolumeTarget::Master => self.master,
-            &VolumeTarget::Mic => self.mic,
-            &VolumeTarget::Process(ref name) => self.resolve_process_exact(name),
-            &VolumeTarget::Unmapped => self.unmapped,
+        match *target {
+            VolumeTarget::Master => self.master,
+            VolumeTarget::Mic => self.mic,
+            VolumeTarget::Process(ref name) => self.resolve_process_exact(name),
+            VolumeTarget::Unmapped => self.unmapped,
         }
     }
 

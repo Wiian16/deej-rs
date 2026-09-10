@@ -33,9 +33,9 @@ impl AudioAdapter for PulseAudioAdapter {
     ) -> Result<(), AudioAdapterError> {
         self.registry.register(target.clone(), volume);
 
-        match target {
+        match *target {
             // TODO: currently returns Err on any sink/source failing, should finish the rest of them before returning
-            &VolumeTarget::Master => {
+            VolumeTarget::Master => {
                 let sinks: Vec<SinkInfo> = self
                     .wrapper
                     .list_sinks()
@@ -56,7 +56,7 @@ impl AudioAdapter for PulseAudioAdapter {
 
                 Ok(())
             }
-            &VolumeTarget::Mic => {
+            VolumeTarget::Mic => {
                 let sources: Vec<SourceInfo> = self
                     .wrapper
                     .list_sources()
