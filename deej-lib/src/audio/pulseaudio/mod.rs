@@ -85,8 +85,8 @@ impl AudioAdapter for PulseAudioAdapter {
     }
 }
 
-impl Into<Volume> for NormalizedVolume {
-    fn into(self) -> Volume {
-        Volume((self.0 * Volume::NORMAL.0 as f32).round() as u32)
+impl From<NormalizedVolume> for Volume {
+    fn from(val: NormalizedVolume) -> Self {
+        Volume((val.0 * Volume::NORMAL.0 as f32).round() as u32)
     }
 }
