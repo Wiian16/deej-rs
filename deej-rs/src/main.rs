@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use anyhow::Context;
 use clap::Parser;
 use deej_lib::audio::pulseaudio::PulseAudioAdapter;
 use log::error;
@@ -39,10 +40,14 @@ fn run() -> anyhow::Result<()> {
         let shutdown = CancellationToken::new();
         let cloned_shutdown = shutdown.clone();
 
-        tokio::spawn(async move {
-            wait_for_shutdown_signal().await;
+        let shutdown_task = tokio::spawn(async move {
+            let result = wait_for_shutdown_signal().await.context("failed to install the SIGTERM handler");
+            
+            // Always shutdown if wait_for_shutdown_signal fails
             log::info!("shutting down...");
             cloned_shutdown.cancel();
+
+            result
         });
 
         let config_watcher = match ConfigWatcher::new(&config_path) {
@@ -89,24 +94,33 @@ fn run() -> anyhow::Result<()> {
             }
         }
 
+        shutdown_task.await.context("shutdown handler task paniced")??;
+
         Ok(())
     })
 }
 
-async fn wait_for_config_change(watcher: &Option<ConfigWatcher>) {
+async fn wait_for_config_change(watcher: Option<&ConfigWatcher>) {
     match watcher {
         Some(w) => w.notified().await,
         None => std::future::pending().await,
     }
 }
 
-async fn wait_for_shutdown_signal() {
-    let mut sigterm = signal(SignalKind::terminate()).expect("failed to install SIGTERM handler");
+/// Waits until the user uses ctrl+c on the process or `sigterm` is received to return.
+///
+/// # Errors
+///
+/// May return [`std::io::Error`] if the signal listener could not be created.
+async fn wait_for_shutdown_signal() -> Result<(), std::io::Error> {
+    let mut sigterm = signal(SignalKind::terminate())?;
 
     tokio::select! {
         _ = tokio::signal::ctrl_c() => {},
         _ = sigterm.recv() => {}
-    }
+    };
+
+    Ok(())
 }
 
 fn setup_logger(verbose: bool) -> Result<(), log::SetLoggerError> {
