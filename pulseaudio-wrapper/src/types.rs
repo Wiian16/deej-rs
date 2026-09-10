@@ -42,7 +42,7 @@ fn proplist_to_hashmap(list: &Proplist) -> HashMap<Box<str>, Box<str>> {
         .collect()
 }
 
-/// A snapshot of a PulseAudio sink.
+/// A snapshot of a `PulseAudio` sink.
 #[allow(unused)]
 #[derive(Debug, Clone)]
 pub struct SinkInfo {
@@ -92,7 +92,7 @@ pub struct SinkInfo {
 
 impl From<&introspect::SinkInfo<'_>> for SinkInfo {
     fn from(info: &introspect::SinkInfo<'_>) -> Self {
-        SinkInfo {
+        Self {
             index: info.index,
             name: info.name.as_ref().map(|c| c.as_ref().into()),
             description: info.description.as_ref().map(|c| c.as_ref().into()),
@@ -136,7 +136,7 @@ pub struct DevicePort {
 
 impl From<&introspect::SinkPortInfo<'_>> for DevicePort {
     fn from(port: &introspect::SinkPortInfo<'_>) -> Self {
-        DevicePort {
+        Self {
             name: port.name.as_ref().map(|c| c.as_ref().into()),
             description: port.description.as_ref().map(|c| c.as_ref().into()),
             priority: port.priority,
@@ -147,7 +147,7 @@ impl From<&introspect::SinkPortInfo<'_>> for DevicePort {
 
 impl From<&introspect::SourcePortInfo<'_>> for DevicePort {
     fn from(p: &introspect::SourcePortInfo<'_>) -> Self {
-        DevicePort {
+        Self {
             name: p.name.as_ref().map(|c| c.as_ref().into()),
             description: p.description.as_ref().map(|c| c.as_ref().into()),
             priority: p.priority,
@@ -156,7 +156,7 @@ impl From<&introspect::SourcePortInfo<'_>> for DevicePort {
     }
 }
 
-/// A snapshot of a PulseAudio source.
+/// A snapshot of a `PulseAudio` source.
 #[allow(unused)]
 #[derive(Debug, Clone)]
 pub struct SourceInfo {
@@ -206,7 +206,7 @@ pub struct SourceInfo {
 
 impl From<&introspect::SourceInfo<'_>> for SourceInfo {
     fn from(info: &introspect::SourceInfo<'_>) -> Self {
-        SourceInfo {
+        Self {
             index: info.index,
             name: info.name.as_ref().map(|c| c.as_ref().into()),
             description: info.description.as_ref().map(|c| c.as_ref().into()),

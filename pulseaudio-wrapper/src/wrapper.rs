@@ -53,7 +53,7 @@ macro_rules! single_collector {
     }};
 }
 
-/// An async handle to a PulseAudio server connection.
+/// An async handle to a `PulseAudio` server connection.
 ///
 /// `PulseWrapper` is cheap to [`Clone`] (it's just an `Arc` around a channel to the worker thread), so it's fine to
 /// share across tasks. The connection is closed automatically and the thread is joined when the last clone is dropped.
@@ -63,6 +63,11 @@ pub struct PulseWrapper {
 }
 
 impl PulseWrapper {
+    /// Creates a new handle into a new worker thread.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PulseError`] if the worker thread fails to spawn. See type for more information.
     pub async fn new(name: String) -> Result<Self, PulseError> {
         Ok(Self {
             inner: PulseInner::new(name).await?,
@@ -82,6 +87,12 @@ impl PulseWrapper {
         rx.await.map_err(|_| PulseError::Disconnected)?
     }
 
+    /// Get the list of sinks connected to the `PulseAudio` server.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PulseError`] if the operation fails or the connection fails during the operation. See type for more
+    /// information.
     pub async fn list_sinks(&self) -> Result<Vec<SinkInfo>, PulseError> {
         self.run(|ctx, tx| {
             ctx.introspect().get_sink_info_list(list_collector!(tx));
@@ -89,6 +100,14 @@ impl PulseWrapper {
         .await
     }
 
+    /// Get a sink connected to the `PulseAudio` server by index.
+    ///
+    /// # Errors
+    ///
+    /// If the sink cannot be found, returns [`PulseError::NotFound`].
+    ///
+    /// Returns [`PulseError`] if the operation fails or the connection fails during the operation. See type for more
+    /// information.
     pub async fn sink_by_index(&self, index: u32) -> Result<SinkInfo, PulseError> {
         self.run(move |ctx, tx| {
             ctx.introspect()
@@ -97,6 +116,16 @@ impl PulseWrapper {
         .await
     }
 
+    /// Set a sink's volume by index.
+    ///
+    /// See [`ChannelVolumes`] for information on volume information.
+    ///
+    /// # Errors
+    ///
+    /// If the sink cannot be found, may return [`PulseError::OperationFailed`].
+    ///
+    /// Returns [`PulseError`] if the operation fails or the connection fails during the operation. See type for more
+    /// information.
     pub async fn set_sink_volume(
         &self,
         index: u32,
@@ -112,6 +141,12 @@ impl PulseWrapper {
         .await
     }
 
+    /// Get the list of sources connected to the `PulseAudio` server.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PulseError`] if the operation fails or the connection fails during the operation. See type for more
+    /// information.
     pub async fn list_sources(&self) -> Result<Vec<SourceInfo>, PulseError> {
         self.run(|ctx, tx| {
             ctx.introspect().get_source_info_list(list_collector!(tx));
@@ -119,6 +154,16 @@ impl PulseWrapper {
         .await
     }
 
+    /// Set a source's volume by index.
+    ///
+    /// See [`ChannelVolumes`] for information on volume information.
+    ///
+    /// # Errors
+    ///
+    /// If the sink cannot be found, may return [`PulseError::OperationFailed`].
+    ///
+    /// Returns [`PulseError`] if the operation fails or the connection fails during the operation. See type for more
+    /// information.
     pub async fn set_source_volume(
         &self,
         index: u32,

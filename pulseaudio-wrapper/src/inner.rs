@@ -17,7 +17,7 @@ use crate::error::PulseError;
 /// A handle for communicating into the background worker thread that owns the `libpulse` mainloop and context.
 ///
 /// Send a [`Command::Run`] to run a function on the mainloop with it's context.
-pub(crate) struct PulseInner {
+pub struct PulseInner {
     /// Option is used here internally so we can use `take` to drop the sender held inside, signalling to the thread
     /// that it should shut down.
     sender: Option<Sender<Command>>,
@@ -56,7 +56,7 @@ impl Drop for PulseInner {
             let _ = handle.join();
         }
 
-        log::debug!("pulseaudio worker thread closed")
+        log::debug!("pulseaudio worker thread closed");
     }
 }
 
@@ -66,7 +66,7 @@ pub enum Command {
     StateChanged,
 }
 
-pub(crate) struct SpawnHandle {
+pub struct SpawnHandle {
     cmd_tx: mpsc::Sender<Command>,
     thread_handle: JoinHandle<()>,
     ready_rx: oneshot::Receiver<Result<(), PulseError>>,
@@ -79,7 +79,7 @@ fn spawn(app_name: String) -> Result<SpawnHandle, PulseError> {
 
     let thread_handle = thread::Builder::new()
         .name("pulseaudio-wrapper".to_string())
-        .spawn(move || thread_main(app_name, self_tx, cmd_rx, ready_tx))?;
+        .spawn(move || thread_main(&app_name, &self_tx, &cmd_rx, ready_tx))?;
 
     Ok(SpawnHandle {
         cmd_tx,
@@ -89,25 +89,19 @@ fn spawn(app_name: String) -> Result<SpawnHandle, PulseError> {
 }
 
 fn thread_main(
-    app_name: String,
-    self_tx: mpsc::Sender<Command>,
-    cmd_rx: mpsc::Receiver<Command>,
+    app_name: &str,
+    self_tx: &mpsc::Sender<Command>,
+    cmd_rx: &mpsc::Receiver<Command>,
     ready_tx: oneshot::Sender<Result<(), PulseError>>,
 ) {
-    let mut mainloop = match Mainloop::new() {
-        Some(m) => m,
-        None => {
-            let _ = ready_tx.send(Err(PulseError::MainLoopCreation));
-            return;
-        }
+    let Some(mut mainloop) = Mainloop::new() else {
+        let _ = ready_tx.send(Err(PulseError::MainLoopCreation));
+        return;
     };
 
-    let mut context = match Context::new(&mainloop, &app_name) {
-        Some(c) => c,
-        None => {
-            let _ = ready_tx.send(Err(PulseError::ContextCreation));
-            return;
-        }
+    let Some(mut context) = Context::new(&mainloop, app_name) else {
+        let _ = ready_tx.send(Err(PulseError::ContextCreation));
+        return;
     };
 
     // State callback runs on PulseAudio's internal thread and can't reach back into this thread's `Context`, so we make
@@ -188,7 +182,7 @@ fn thread_main(
     }
 
     // Steady state: run requests as they come in until told to stop or the connection dies
-    for cmd in cmd_rx.iter() {
+    for cmd in cmd_rx {
         match cmd {
             Command::Run(f) => {
                 mainloop.lock();
