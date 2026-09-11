@@ -82,10 +82,10 @@ impl AudioAdapter for PulseAudioAdapter {
 
                 Ok(())
             }
-            _ => {
-                log::warn!("Only master channel is implemented for pulseaudio");
-                Ok(())
-            }
+            _ => Err(AudioAdapterError::without_source(
+                target.clone(),
+                "not implemented",
+            )),
         }
     }
 }
