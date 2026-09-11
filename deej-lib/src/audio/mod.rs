@@ -26,7 +26,8 @@ impl fmt::Display for VolumeTarget {
 #[derive(Debug)]
 pub struct AudioAdapterError {
     target: VolumeTarget,
-    source: Box<dyn std::error::Error + Send + Sync + 'static>,
+    message: Option<Box<str>>,
+    source: Option<Box<dyn std::error::Error + Send + Sync + 'static>>,
 }
 
 impl AudioAdapterError {
@@ -36,24 +37,50 @@ impl AudioAdapterError {
     ) -> Self {
         Self {
             target,
-            source: Box::new(source),
+            message: None,
+            source: Some(Box::new(source)),
         }
+    }
+
+    pub fn without_source(target: VolumeTarget, message: impl Into<Box<str>>) -> Self {
+        Self {
+            target,
+            message: Some(message.into()),
+            source: None,
+        }
+    }
+
+    #[must_use]
+    pub fn with_message(mut self, message: impl Into<Box<str>>) -> Self {
+        self.message = Some(message.into());
+        self
+    }
+
+    #[must_use]
+    pub const fn target(&self) -> &VolumeTarget {
+        &self.target
     }
 }
 
 impl fmt::Display for AudioAdapterError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "failed to set volume for {}: {}",
-            self.target, self.source
-        )
+        write!(f, "failed to set volume for {}", self.target)?;
+        if let Some(message) = &self.message {
+            write!(f, ": {message}")?;
+        }
+        if let Some(source) = &self.source {
+            write!(f, ": {source}")?;
+        }
+        Ok(())
     }
 }
 
 impl std::error::Error for AudioAdapterError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        Some(self.source.as_ref())
+        #[allow(clippy::option_map_or_none)]
+        self.source
+            .as_ref()
+            .map_or(None, |source| Some(source.as_ref()))
     }
 }
 
