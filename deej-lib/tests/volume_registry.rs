@@ -1,7 +1,7 @@
 use deej_lib::audio::{NormalizedVolume, VolumeTarget, volume_registry::VolumeRegistry};
 
-const PROCESS1: &'static str = "process1";
-const PROCESS2: &'static str = "process2";
+const PROCESS1: &str = "process1";
+const PROCESS2: &str = "process2";
 
 const MASTER_VOLUME: NormalizedVolume = NormalizedVolume::clamped(0.0);
 const MIC_VOLUME: NormalizedVolume = NormalizedVolume::clamped(0.1);

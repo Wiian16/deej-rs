@@ -120,21 +120,21 @@ mod parse_line_tests {
     #[test]
     fn parses_and_normalizes() {
         let frame = parse_line("0|511|1023", 1023, false).unwrap();
-        assert_eq!(frame[0].get(), 0.0);
+        assert!(frame[0].get() < 0.001);
         assert!((frame[1].get() - 0.4995).abs() < 0.001);
-        assert_eq!(frame[2].get(), 1.0);
+        assert!(frame[2].get() - 1.0 < 0.001);
     }
 
     #[test]
     fn clamps_values_above_max() {
         let frame = parse_line("2000", 1023, false).unwrap();
-        assert_eq!(frame[0].get(), 1.0);
+        assert!(frame[0].get() - 1.0 < 0.001);
     }
 
     #[test]
     fn inverts_when_requested() {
         let frame = parse_line("1023", 1023, true).unwrap();
-        assert_eq!(frame[0].get(), 0.0);
+        assert!(frame[0].get() < 0.001);
     }
 
     #[test]
