@@ -234,3 +234,67 @@ impl From<&introspect::SourceInfo<'_>> for SourceInfo {
         }
     }
 }
+
+/// A snapshot of a sink input.
+#[allow(clippy::struct_excessive_bools)]
+#[derive(Debug, Clone)]
+pub struct SinkInputInfo {
+    /// The sink input's numeric index.
+    pub index: u32,
+    /// A human-readable name for the stream (often the application's name / title).
+    pub name: Option<Box<str>>,
+    /// Index of the module that owns this sink input, if any.
+    pub owner_module: Option<u32>,
+    /// Index of the client this stream belongs to, if any.
+    pub client: Option<u32>,
+    /// Index of the sink this stream is currently connected to.
+    pub sink: u32,
+    /// The sample format, rate, and channel count of the stream.
+    pub sample_spec: SampleSpec,
+    /// The stream's channel map.
+    pub channel_map: ChannelMap,
+    /// Per-channel volume of the stream.
+    pub volume: ChannelVolumes,
+    /// Latency due to buffering inside the stream.
+    pub buffer_usec: MicroSeconds,
+    /// Latency of the connected sink.
+    pub sink_usec: MicroSeconds,
+    /// The name of the resampling method in use, if known.
+    pub resample_method: Option<Box<str>>,
+    /// Name of the driver backing this stream.
+    pub driver: Option<Box<str>>,
+    /// Whether the stream is muted.
+    pub mute: bool,
+    /// The stream's property list, flattened to owned strings.
+    pub properties: HashMap<Box<str>, Box<str>>,
+    /// Whether playback of the stream is currently corked (paused).
+    pub corked: bool,
+    /// Whether the stream has a meaningful volume.
+    pub has_volume: bool,
+    /// Whether the stream's volume can be changed by clients.
+    pub volume_writable: bool,
+}
+
+impl From<&introspect::SinkInputInfo<'_>> for SinkInputInfo {
+    fn from(info: &introspect::SinkInputInfo<'_>) -> Self {
+        Self {
+            index: info.index,
+            name: info.name.as_ref().map(|c| c.as_ref().into()),
+            owner_module: info.owner_module,
+            client: info.client,
+            sink: info.sink,
+            sample_spec: info.sample_spec,
+            channel_map: info.channel_map,
+            volume: info.volume,
+            buffer_usec: info.buffer_usec,
+            sink_usec: info.sink_usec,
+            resample_method: info.resample_method.as_ref().map(|c| c.as_ref().into()),
+            driver: info.driver.as_ref().map(|c| c.as_ref().into()),
+            mute: info.mute,
+            properties: proplist_to_hashmap(&info.proplist),
+            corked: info.corked,
+            has_volume: info.has_volume,
+            volume_writable: info.volume_writable,
+        }
+    }
+}

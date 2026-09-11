@@ -6,7 +6,7 @@ use libpulse_binding::{callbacks::ListResult, context::Context, volume::ChannelV
 use crate::{
     error::PulseError,
     inner::{Command, PulseInner},
-    types::{SinkInfo, SourceInfo},
+    types::{SinkInfo, SinkInputInfo, SourceInfo},
 };
 
 /// Expands to a `move` closure that collects every `ListResult::Item` into a `Vec` (converting it via `From`) and
@@ -175,6 +175,44 @@ impl PulseWrapper {
                 &volume,
                 Some(success_callback(tx)),
             );
+        })
+        .await
+    }
+
+    /// Get the list of all sink inputs connected to the `PulseAudio` server.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PulseError`] if the operation fails or the connection fails during the operation. See type for more
+    /// information.
+    pub async fn list_sink_inputs(&self) -> Result<Vec<SinkInputInfo>, PulseError> {
+        self.run(move |ctx, tx| {
+            let _ = ctx
+                .introspect()
+                .get_sink_input_info_list(list_collector!(tx));
+        })
+        .await
+    }
+
+    /// Set a sink input's volume by index.
+    ///
+    /// See [`ChannelVolumes`] for information on volume information.
+    ///
+    /// # Errors
+    ///
+    /// If the source input cannot be found, may return [`PulseError::OperationFailed`].
+    ///
+    /// Returns [`PulseError`] if the operation fails or the connection fails during the operation. See type for more
+    /// information.
+    pub async fn set_sink_input_volume(
+        &self,
+        index: u32,
+        volume: ChannelVolumes,
+    ) -> Result<(), PulseError> {
+        self.run(move |ctx, tx| {
+            let _ =
+                ctx.introspect()
+                    .set_sink_input_volume(index, &volume, Some(success_callback(tx)));
         })
         .await
     }
