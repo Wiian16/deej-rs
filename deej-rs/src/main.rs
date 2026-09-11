@@ -42,7 +42,7 @@ fn run() -> anyhow::Result<()> {
 
         let shutdown_task = tokio::spawn(async move {
             let result = wait_for_shutdown_signal().await.context("failed to install the SIGTERM handler");
-            
+
             // Always shutdown if wait_for_shutdown_signal fails
             log::info!("shutting down...");
             cloned_shutdown.cancel();
