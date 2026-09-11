@@ -71,7 +71,7 @@ fn run() -> anyhow::Result<()> {
 
             loop {
                 tokio::select! {
-                    _ = wait_for_config_change(&config_watcher) => {
+                    () = wait_for_config_change(config_watcher.as_ref()) => {
                         match config::load(&config_path) {
                             Ok(new_config) => {
                                 log::info!("config change detected, reloading deej");
@@ -86,7 +86,7 @@ fn run() -> anyhow::Result<()> {
                             }
                         }
                     }
-                    _ = shutdown.cancelled() => {
+                    () = shutdown.cancelled() => {
                         let _ = service.await;
                         break 'outer;
                     }

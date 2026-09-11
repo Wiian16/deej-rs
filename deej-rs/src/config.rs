@@ -108,7 +108,7 @@ impl ConfigWatcher {
                 }
                 Err(err) => {
                     log::warn!("error getting notifications for config file");
-                    log::debug!("notify error: {:#?}", err)
+                    log::debug!("notify error: {err:#?}");
                 }
             },
         )?;
