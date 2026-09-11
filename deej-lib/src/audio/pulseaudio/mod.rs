@@ -1,7 +1,9 @@
+use std::collections::HashMap;
+
 use async_trait::async_trait;
 use pulseaudio_wrapper::{
     PulseError, PulseWrapper,
-    types::{SinkInfo, SourceInfo, Volume},
+    types::{SinkInfo, SinkInputInfo, SourceInfo, Volume},
 };
 
 use crate::audio::{
@@ -82,12 +84,57 @@ impl AudioAdapter for PulseAudioAdapter {
 
                 Ok(())
             }
-            _ => Err(AudioAdapterError::without_source(
+            VolumeTarget::Process(ref name) => {
+                let streams = self
+                    .wrapper
+                    .list_sink_inputs()
+                    .await
+                    .map_err(|err| AudioAdapterError::new(target.clone(), err))?;
+                let target_volume: Volume = volume.into();
+
+                let filtered: Vec<&SinkInputInfo> = streams
+                    .iter()
+                    .filter(|stream| match_process(name, &stream.properties))
+                    .collect();
+
+                for stream in filtered {
+                    let index = stream.index;
+                    let mut volumes = stream.volume;
+                    volumes.set(volumes.len(), target_volume);
+
+                    self.wrapper
+                        .set_sink_input_volume(index, volumes)
+                        .await
+                        .map_err(|err| AudioAdapterError::new(target.clone(), err))?;
+                }
+
+                Ok(())
+            }
+            VolumeTarget::Unmapped => Err(AudioAdapterError::without_source(
                 target.clone(),
                 "not implemented",
             )),
         }
     }
+}
+
+fn match_process(name: &str, proplist: &HashMap<Box<str>, Box<str>>) -> bool {
+    // Property keys to filter by.
+    const APP_NAME: &str = "application.name";
+    const APP_BINARY: &str = "application.process.binary";
+    const NODE_NAME: &str = "node.name";
+
+    let app_name_match = proplist
+        .get(APP_NAME)
+        .is_some_and(|value| value.eq_ignore_ascii_case(name));
+    let app_binary_match = proplist
+        .get(APP_BINARY)
+        .is_some_and(|value| value.eq_ignore_ascii_case(name));
+    let node_name_match = proplist
+        .get(NODE_NAME)
+        .is_some_and(|value| value.eq_ignore_ascii_case(name));
+
+    app_name_match || app_binary_match || node_name_match
 }
 
 impl From<NormalizedVolume> for Volume {
