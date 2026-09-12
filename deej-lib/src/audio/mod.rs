@@ -84,6 +84,37 @@ impl std::error::Error for AudioAdapterError {
     }
 }
 
+/// Represents a volume as a percentage.
+///
+/// `NormalizedVolumes` will always be between 0.0 (0%) and 1.0 (100%) inclusive. Use [`NormalizedVolume::new()`] to
+/// create a normalized volume, failing if the value is not normalized. Use [`NormalizedVolume::clamped()`] to create a
+/// normalized volume that is clamped to be in [0.0, 1.0].
+///
+/// # Examples
+/// ```
+/// use deej_lib::audio::NormalizedVolume;
+///
+/// // Valid values construct successfully.
+/// let half = NormalizedVolume::new(0.5).unwrap();
+/// assert!(half.get() - 0.5 < 0.001);
+///
+/// // Out-of-range values are rejected.
+/// assert!(NormalizedVolume::new(1.5).is_none());
+/// assert!(NormalizedVolume::new(-0.1).is_none());
+///
+/// // Non-finite values are also rejected.
+/// assert!(NormalizedVolume::new(f32::NAN).is_none());
+/// assert!(NormalizedVolume::new(f32::INFINITY).is_none());
+///
+/// // `clamped` never fails, instead saturating to the valid range.
+/// assert_eq!(NormalizedVolume::clamped(1.5), NormalizedVolume::MAX);
+/// assert_eq!(NormalizedVolume::clamped(-0.1), NormalizedVolume::MIN);
+/// assert!(NormalizedVolume::clamped(0.5).get() - 0.5 < 0.001);
+///
+/// // Converts back into a plain `f32` when needed.
+/// let volume: f32 = half.into();
+/// assert!(volume - 0.5 < 0.001);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct NormalizedVolume(f32);
 
@@ -100,9 +131,32 @@ impl NormalizedVolume {
         }
     }
 
+    /// Create a new `NormalizedVolume` that is always clamped between 0.0 and 1.0 inclusive.
+    ///
+    /// Unlike [`NormalizedVolume::new()`], this constructor always succeeds. [`f32::NAN`] is clamped to 0.0, rather than propagating like in [`f32::clamp`]
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use deej_lib::audio::NormalizedVolume;
+    ///
+    /// // Values in range are unaffected
+    /// assert!(NormalizedVolume::clamped(0.5).get() - 0.5 < 0.001);
+    ///
+    /// // Out-of-range values clamp to the nearest bound
+    /// assert_eq!(NormalizedVolume::clamped(1.5), NormalizedVolume::MAX);
+    /// assert_eq!(NormalizedVolume::clamped(-0.1), NormalizedVolume::MIN);
+    ///
+    /// // NaN clamps to MIN, rather than propagating
+    /// assert_eq!(NormalizedVolume::clamped(f32::NAN), NormalizedVolume::MIN);
+    /// ```
     #[must_use]
     pub const fn clamped(value: f32) -> Self {
-        Self(value.clamp(0.0, 1.0))
+        if value.is_nan() {
+            Self::MIN
+        } else {
+            Self(value.clamp(0.0, 1.0))
+        }
     }
 
     #[must_use]
