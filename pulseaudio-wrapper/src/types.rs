@@ -29,11 +29,13 @@ pub use libpulse_binding::volume::Volume;
 
 use std::collections::HashMap;
 
-use libpulse_binding::{context::introspect, proplist::Proplist};
+use libpulse_binding::context::introspect;
+
+pub type Proplist = HashMap<Box<str>, Box<str>>;
 
 /// Turns a property list into a plain owned map. Non-UTF8 values are dropped rather than exposing `libpulse`'s
 /// borrowed/raw representation to callers.
-fn proplist_to_hashmap(list: &Proplist) -> HashMap<Box<str>, Box<str>> {
+fn proplist_to_hashmap(list: &libpulse_binding::proplist::Proplist) -> HashMap<Box<str>, Box<str>> {
     list.iter()
         .filter_map(|key| {
             let value = list.get_str(&key);
@@ -73,7 +75,7 @@ pub struct SinkInfo {
     /// Sink capability flags
     pub flags: SinkFlagSet,
     /// The sink's property list, flattened to owned strings.
-    pub properties: HashMap<Box<str>, Box<str>>,
+    pub properties: Proplist,
     /// The latency the sink has actually been configured to.
     pub configured_latency: MicroSeconds,
     /// the "base" (unamplified/unattenuated) volume of the sink.
@@ -187,7 +189,7 @@ pub struct SourceInfo {
     /// Source capability flags.
     pub flags: SourceFlagSet,
     /// the source's property list, flattened to owned strings.
-    pub properties: HashMap<Box<str>, Box<str>>,
+    pub properties: Proplist,
     /// The latency the source has actually been configured to.
     pub configured_latency: MicroSeconds,
     /// the "base" (unamplified/unattenuated) volume of the source.
@@ -266,7 +268,7 @@ pub struct SinkInputInfo {
     /// Whether the stream is muted.
     pub mute: bool,
     /// The stream's property list, flattened to owned strings.
-    pub properties: HashMap<Box<str>, Box<str>>,
+    pub properties: Proplist,
     /// Whether playback of the stream is currently corked (paused).
     pub corked: bool,
     /// Whether the stream has a meaningful volume.
