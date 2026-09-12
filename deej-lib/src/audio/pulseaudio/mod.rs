@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use async_trait::async_trait;
 use pulseaudio_wrapper::{
     PulseError, PulseWrapper,
@@ -35,7 +33,14 @@ impl PulseAudioAdapter {
         })
     }
 
-    fn is_unmapped(&self, proplist: &HashMap<Box<str>, Box<str>>) -> bool {
+    /// Determines if a sink input is unmapped based off the volume registry.
+    ///
+    /// Uses `application.name`, `application.process.binary`, and `node.name` from the proplist to check against the
+    /// volume registry to determine if it is unmapped. If none of these fields exactly resolve to a process, it is
+    /// considered to be unmapped.
+    fn is_unmapped(&self, sink_input_info: &SinkInputInfo) -> bool {
+        let proplist = &sink_input_info.properties;
+
         let app_name_match = proplist.get(APP_NAME).is_some_and(|app_name| {
             self.registry
                 .resolve_process_exact(&app_name.to_lowercase())
@@ -119,7 +124,7 @@ impl AudioAdapter for PulseAudioAdapter {
 
                 let filtered: Vec<&SinkInputInfo> = streams
                     .iter()
-                    .filter(|stream| match_process(name, &stream.properties))
+                    .filter(|stream| match_process(name, stream))
                     .collect();
 
                 for stream in filtered {
@@ -143,9 +148,7 @@ impl AudioAdapter for PulseAudioAdapter {
                     .map_err(|err| AudioAdapterError::new(target.clone(), err))?;
                 let target_volume: Volume = volume.into();
 
-                let filtered = streams
-                    .iter()
-                    .filter(|stream| self.is_unmapped(&stream.properties));
+                let filtered = streams.iter().filter(|stream| self.is_unmapped(stream));
 
                 for stream in filtered {
                     let index = stream.index;
@@ -164,7 +167,13 @@ impl AudioAdapter for PulseAudioAdapter {
     }
 }
 
-fn match_process(name: &str, proplist: &HashMap<Box<str>, Box<str>>) -> bool {
+/// Determines if a sink input belongs to a process with `name`.
+///
+/// Checks `application.name`, `application.process.binary`, and `node.name` from the proplist to match with `name`. If
+/// any one of those properties matches, the sink input is considered matched.
+fn match_process(name: &str, sink_input_info: &SinkInputInfo) -> bool {
+    let proplist = &sink_input_info.properties;
+
     let app_name_match = proplist
         .get(APP_NAME)
         .is_some_and(|value| value.eq_ignore_ascii_case(name));
