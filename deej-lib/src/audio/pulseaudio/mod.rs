@@ -11,6 +11,11 @@ use crate::audio::{
     volume_registry::VolumeRegistry,
 };
 
+// Property keys to filter processes by.
+const APP_NAME: &str = "application.name";
+const APP_BINARY: &str = "application.process.binary";
+const NODE_NAME: &str = "node.name";
+
 #[derive(Clone)]
 pub struct PulseAudioAdapter {
     wrapper: PulseWrapper,
@@ -28,6 +33,26 @@ impl PulseAudioAdapter {
             wrapper: PulseWrapper::new("deej-pulseaudio-adapter".into()).await?,
             registry: VolumeRegistry::new(),
         })
+    }
+
+    fn is_unmapped(&self, proplist: &HashMap<Box<str>, Box<str>>) -> bool {
+        let app_name_match = proplist.get(APP_NAME).is_some_and(|app_name| {
+            self.registry
+                .resolve_process_exact(&app_name.to_lowercase())
+                .is_some()
+        });
+        let app_binary_match = proplist.get(APP_BINARY).is_some_and(|app_binary| {
+            self.registry
+                .resolve_process_exact(&app_binary.to_lowercase())
+                .is_some()
+        });
+        let node_name_match = proplist.get(NODE_NAME).is_some_and(|node_name| {
+            self.registry
+                .resolve_process_exact(&node_name.to_lowercase())
+                .is_some()
+        });
+
+        !(app_name_match || app_binary_match || node_name_match)
     }
 }
 
@@ -110,20 +135,36 @@ impl AudioAdapter for PulseAudioAdapter {
 
                 Ok(())
             }
-            VolumeTarget::Unmapped => Err(AudioAdapterError::without_source(
-                target.clone(),
-                "not implemented",
-            )),
+            VolumeTarget::Unmapped => {
+                let streams = self
+                    .wrapper
+                    .list_sink_inputs()
+                    .await
+                    .map_err(|err| AudioAdapterError::new(target.clone(), err))?;
+                let target_volume: Volume = volume.into();
+
+                let filtered = streams
+                    .iter()
+                    .filter(|stream| self.is_unmapped(&stream.properties));
+
+                for stream in filtered {
+                    let index = stream.index;
+                    let mut volumes = stream.volume;
+                    volumes.set(volumes.len(), target_volume);
+
+                    self.wrapper
+                        .set_sink_input_volume(index, volumes)
+                        .await
+                        .map_err(|err| AudioAdapterError::new(target.clone(), err))?;
+                }
+
+                Ok(())
+            }
         }
     }
 }
 
 fn match_process(name: &str, proplist: &HashMap<Box<str>, Box<str>>) -> bool {
-    // Property keys to filter by.
-    const APP_NAME: &str = "application.name";
-    const APP_BINARY: &str = "application.process.binary";
-    const NODE_NAME: &str = "node.name";
-
     let app_name_match = proplist
         .get(APP_NAME)
         .is_some_and(|value| value.eq_ignore_ascii_case(name));
