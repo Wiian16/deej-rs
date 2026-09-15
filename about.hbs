@@ -1,0 +1,12 @@
+# Third-Party Licenses
+
+{{#each licenses}}
+### {{this.name}}
+
+Used by: {{#each this.used_by}}{{this.crate.name}}{{/each}}
+
+```
+{{{this.text}}}
+```
+
+{{/each}}
