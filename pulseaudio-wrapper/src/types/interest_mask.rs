@@ -1,3 +1,4 @@
+/// A event generator a subscription may register interest with.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum InterestMask {
     Sink,
@@ -35,6 +36,10 @@ impl std::ops::BitOr for InterestMask {
     }
 }
 
+/// A set of event generators that a subscription may subscribe to.
+///
+/// Clients may use [`InterestMaskSetBuilder`], the bitwise or (`|`) operator, or set the fields directly to create
+/// these. Implements iterating through set flags.
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
 pub struct InterestMaskSet {
@@ -50,6 +55,7 @@ pub struct InterestMaskSet {
 }
 
 impl InterestMaskSet {
+    /// Create a new set with all flags set to `true`.
     #[must_use]
     pub const fn all() -> Self {
         Self {
@@ -65,6 +71,7 @@ impl InterestMaskSet {
         }
     }
 
+    /// Create a new set with all flags set to `false`. The default.
     #[must_use]
     pub const fn none() -> Self {
         Self {
@@ -80,6 +87,7 @@ impl InterestMaskSet {
         }
     }
 
+    /// Whether the set contains `interest`.
     #[must_use]
     pub const fn contains(&self, interest: InterestMask) -> bool {
         match interest {
@@ -95,6 +103,7 @@ impl InterestMaskSet {
         }
     }
 
+    /// Returns an iterator over the flags set to `true`.
     #[must_use]
     pub fn iter(&self) -> InterestMaskSetIter {
         (*self).into_iter()
@@ -162,6 +171,7 @@ impl std::ops::BitOr<InterestMask> for InterestMaskSet {
     }
 }
 
+/// An opaque iterator for [`InterestMaskSet`].
 #[derive(Debug, Clone)]
 pub struct InterestMaskSetIter {
     entries: [(bool, InterestMask); 9],
@@ -192,17 +202,47 @@ impl Iterator for InterestMaskSetIter {
     }
 }
 
+/// A builder for [`InterestMaskSet`].
+///
+/// # Examples
+///
+/// ```rust
+/// use pulseaudio_wrapper::types::{InterestMask, InterestMaskSet, InterestMaskSetBuilder};
+///
+/// let only_sink = InterestMaskSetBuilder::new()
+///     .set(InterestMask::Sink)
+///     .build();
+/// assert!(only_sink.contains(InterestMask::Sink));
+/// assert!(!only_sink.contains(InterestMask::Source));
+/// let all_but_sink = InterestMaskSetBuilder::from(InterestMaskSet::all())
+///     .unset(InterestMask::Sink)
+///     .build();
+/// assert!(!all_but_sink.contains(InterestMask::Sink));
+/// assert!(all_but_sink.contains(InterestMask::Source));
+/// let with_set_all = InterestMaskSetBuilder::new()
+///     .set_all(vec![
+///         InterestMask::Sink,
+///         InterestMask::Source,
+///         InterestMask::SinkInput,
+///     ])
+///     .build();
+/// assert!(with_set_all.contains(InterestMask::Sink));
+/// assert!(with_set_all.contains(InterestMask::Source));
+/// assert!(with_set_all.contains(InterestMask::SinkInput));
+/// ```
 #[derive(Default, Debug, Copy, Clone)]
 pub struct InterestMaskSetBuilder {
     inner: InterestMaskSet,
 }
 
 impl InterestMaskSetBuilder {
+    /// Create a new builber, defaults to [`InterestMaskSet::none`].
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Set an interest to `true`.
     #[must_use]
     pub const fn set(mut self, interest: InterestMask) -> Self {
         match interest {
@@ -220,6 +260,7 @@ impl InterestMaskSetBuilder {
         self
     }
 
+    /// Set a collection of interests to `true`.
     #[must_use]
     pub fn set_all(mut self, interests: impl IntoIterator<Item = InterestMask>) -> Self {
         for i in interests {
@@ -229,6 +270,7 @@ impl InterestMaskSetBuilder {
         self
     }
 
+    /// Set an interest to `false`.
     #[must_use]
     pub const fn unset(mut self, interest: InterestMask) -> Self {
         match interest {
@@ -246,6 +288,7 @@ impl InterestMaskSetBuilder {
         self
     }
 
+    /// Set a collection of interests to `false`.
     #[must_use]
     pub fn unset_all(mut self, interests: impl IntoIterator<Item = InterestMask>) -> Self {
         for i in interests {
