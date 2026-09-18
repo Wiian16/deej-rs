@@ -1,12 +1,13 @@
 use std::sync::Arc;
 
-use futures::channel::oneshot;
+use futures::channel::{mpsc, oneshot};
 use libpulse_binding::{callbacks::ListResult, context::Context, volume::ChannelVolumes};
 
 use crate::{
+    dispatcher::{SubDispatcher, SubscriptionId},
     error::PulseError,
     inner::{Command, PulseInner},
-    types::{SinkInfo, SinkInputInfo, SourceInfo},
+    types::{SinkInfo, SinkInputInfo, SourceInfo, SubscriptionEvent},
 };
 
 /// Expands to a `move` closure that collects every `ListResult::Item` into a `Vec` (converting it via `From`) and
@@ -60,6 +61,7 @@ macro_rules! single_collector {
 #[derive(Clone)]
 pub struct PulseWrapper {
     inner: Arc<PulseInner>,
+    dispatcher: SubDispatcher,
 }
 
 impl PulseWrapper {
@@ -71,6 +73,7 @@ impl PulseWrapper {
     pub async fn new(name: String) -> Result<Self, PulseError> {
         Ok(Self {
             inner: PulseInner::new(name).await?,
+            dispatcher: SubDispatcher::new(),
         })
     }
 
@@ -216,6 +219,11 @@ impl PulseWrapper {
         })
         .await
     }
+}
+pub struct Subscription {
+    id: SubscriptionId,
+    wrapper: PulseWrapper,
+    rx: mpsc::Receiver<SubscriptionEvent>,
 }
 
 /// Wrap a one-shot sender into the `FnMut(bool)` shape every set, move, and kill introspection calls want for their
