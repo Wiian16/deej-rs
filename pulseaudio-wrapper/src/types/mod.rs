@@ -6,6 +6,10 @@
 
 /// Re-export of [`libpulse_binding::channelmap::Map`].
 pub use libpulse_binding::channelmap::Map as ChannelMap;
+/// Re-export of [`libpulse_binding::context::subscribe::Facility`]
+pub use libpulse_binding::context::subscribe::Facility;
+/// Re-export of [`libpulse_binding::context::subscribe::Operation`]
+pub use libpulse_binding::context::subscribe::Operation;
 /// Re-export of [`libpulse_binding::def::PortAvailable`]
 pub use libpulse_binding::def::PortAvailable;
 /// Re-export of [`libpulse_binding::def::SinkFlagSet`]
@@ -303,4 +307,15 @@ impl From<&introspect::SinkInputInfo<'_>> for SinkInputInfo {
             volume_writable: info.volume_writable,
         }
     }
+}
+
+/// A subscription received from a [Subscription](libpulse_binding::Subscription).
+///
+/// Represents a facility (the object that created the event), operation (the type of event), and an index of the
+/// specific device.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SubscriptionEvent {
+    pub facility: Facility,
+    pub operation: Operation,
+    pub index: u32,
 }
