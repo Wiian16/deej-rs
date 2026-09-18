@@ -198,8 +198,8 @@ mod tests {
         let sub2 = dispatch.register(InterestMaskSet::none());
         let sub3 = dispatch.register(InterestMaskSet::none());
 
-        assert!(sub1.id != sub2.id);
-        assert!(sub2.id != sub3.id);
+        assert_ne!(sub1.id, sub2.id);
+        assert_ne!(sub2.id, sub3.id);
         assert!(sub1.id < sub2.id);
         assert!(sub2.id < sub3.id);
     }
@@ -302,7 +302,7 @@ mod tests {
             sub3.rx.try_recv().unwrap(),
             subscription_event(Facility::Sink),
             "The still-active subscription should receive the event"
-        )
+        );
     }
 
     #[test]
@@ -428,15 +428,13 @@ mod tests {
         let dispatch = SubDispatcher::new();
         let n = 100;
 
-        let handles: Vec<_> = (0..n)
-            .map(|_| {
-                let dispatch = dispatch.clone();
-                thread::spawn(move || {
-                    let mask = InterestMaskSet::none();
-                    dispatch.register(mask).id
-                })
+        let handles = (0..n).map(|_| {
+            let dispatch = dispatch.clone();
+            thread::spawn(move || {
+                let mask = InterestMaskSet::none();
+                dispatch.register(mask).id
             })
-            .collect();
+        });
 
         let ids: Vec<SubscriptionId> = handles
             .into_iter()
@@ -446,6 +444,6 @@ mod tests {
         assert_eq!(ids.len(), n);
 
         let unique: HashSet<_> = ids.iter().collect();
-        assert_eq!(unique.len(), n, "duplicate ids found: {ids:?}")
+        assert_eq!(unique.len(), n, "duplicate ids found: {ids:?}");
     }
 }
