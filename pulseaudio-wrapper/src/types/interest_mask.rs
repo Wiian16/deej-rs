@@ -1,3 +1,5 @@
+use libpulse_binding::context::subscribe::Facility;
+
 /// A event generator a subscription may register interest with.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum InterestMask {
@@ -24,6 +26,22 @@ impl From<InterestMask> for libpulse_binding::context::subscribe::InterestMaskSe
             InterestMask::SampleCache => Self::SAMPLE_CACHE,
             InterestMask::Server => Self::SERVER,
             InterestMask::Card => Self::CARD,
+        }
+    }
+}
+
+impl From<Facility> for InterestMask {
+    fn from(facility: Facility) -> Self {
+        match facility {
+            Facility::Sink => Self::Sink,
+            Facility::Source => Self::Source,
+            Facility::SinkInput => Self::SinkInput,
+            Facility::SourceOutput => Self::SourceOutput,
+            Facility::Module => Self::Module,
+            Facility::Client => Self::Client,
+            Facility::SampleCache => Self::SampleCache,
+            Facility::Server => Self::Server,
+            Facility::Card => Self::Card,
         }
     }
 }
