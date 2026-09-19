@@ -1,8 +1,12 @@
 use async_trait::async_trait;
 use pulseaudio_wrapper::{
-    PulseError, PulseWrapper,
-    types::{SinkInfo, SinkInputInfo, SourceInfo, Volume},
+    PulseError, PulseWrapper, Subscription,
+    types::{
+        Facility, InterestMask, InterestMaskSetBuilder, Operation, SinkInfo, SinkInputInfo,
+        SourceInfo, SubscriptionEvent, Volume,
+    },
 };
+use tokio_util::sync::CancellationToken;
 
 use crate::audio::{
     AudioAdapter, AudioAdapterError, NormalizedVolume, VolumeTarget,
@@ -26,11 +30,80 @@ impl PulseAudioAdapter {
     /// # Errors
     ///
     /// Returns [`PulseError`] if there is an error in the creation of the `PulseAudio` service.
-    pub async fn new() -> Result<Self, PulseError> {
-        Ok(Self {
-            wrapper: PulseWrapper::new("deej-pulseaudio-adapter".into()).await?,
+    pub async fn new(shutdown: CancellationToken) -> Result<Self, PulseError> {
+        let wrapper = PulseWrapper::new("deej-pulseaudio-adapter".into()).await?;
+
+        let interests = InterestMaskSetBuilder::new()
+            .set(InterestMask::Sink)
+            .set(InterestMask::Source)
+            .set(InterestMask::SinkInput)
+            .build();
+        let sub = wrapper.subscribe(interests).await?;
+        let adapter = Self {
+            wrapper,
             registry: VolumeRegistry::new(),
-        })
+        };
+
+        tokio::spawn(subscription_task(adapter.clone(), sub, shutdown.clone()));
+
+        Ok(adapter)
+    }
+
+    pub async fn handle_subscription_event(&self, event: SubscriptionEvent) {
+        if event.operation == Operation::Removed {
+            return;
+        }
+
+        // FIXME: add check for if volume needs to be changed (is outside a small window, maybe 2%?)
+
+        let result = match event.facility {
+            Facility::Sink => self.apply_sink_volume(event.index).await,
+            Facility::Source => self.apply_source_volume(event.index).await,
+            Facility::SinkInput => self.apply_sink_input_volume(event.index).await,
+            _ => Ok(()),
+        };
+
+        if let Err(err) = result {
+            log::warn!(
+                "failed to new {:?} (index {}): {err:#}",
+                event.facility, // FIXME: would rather use display here, not debug, but display isn't implemented
+                event.index
+            );
+        }
+    }
+
+    async fn apply_sink_volume(&self, index: u32) -> Result<(), PulseError> {
+        let Some(volume) = self.registry.resolve(&VolumeTarget::Master) else {
+            return Ok(());
+        };
+
+        let sink = self.wrapper.sink_by_index(index).await?;
+        let mut volumes = sink.volume;
+        volumes.set(volumes.len(), volume.into());
+        self.wrapper.set_sink_volume(index, volumes).await
+    }
+
+    async fn apply_source_volume(&self, index: u32) -> Result<(), PulseError> {
+        let Some(volume) = self.registry.resolve(&VolumeTarget::Mic) else {
+            return Ok(());
+        };
+
+        let source = self.wrapper.source_by_index(index).await?;
+        let mut volumes = source.volume;
+        volumes.set(volumes.len(), volume.into());
+        self.wrapper.set_source_volume(index, volumes).await
+    }
+
+    async fn apply_sink_input_volume(&self, index: u32) -> Result<(), PulseError> {
+        let stream = self.wrapper.sink_input_by_index(index).await?;
+
+        let Some(volume) = self.resolve_stream_volume(&stream) else {
+            return Ok(());
+        };
+
+        let mut volumes = stream.volume;
+        volumes.set(volumes.len(), volume.into());
+        self.wrapper.set_sink_input_volume(index, volumes).await
     }
 
     /// Determines if a sink input is unmapped based off the volume registry.
@@ -58,6 +131,21 @@ impl PulseAudioAdapter {
         });
 
         !(app_name_match || app_binary_match || node_name_match)
+    }
+
+    /// Resolves the volume that should apply to `stream`.
+    /// Checks `application.name`, `application.process.binary`, and `node.name` against registered process volumes in
+    /// turn, falling back to the unmapped volume if none of them match.
+    fn resolve_stream_volume(&self, stream: &SinkInputInfo) -> Option<NormalizedVolume> {
+        let proplist = &stream.properties;
+
+        [APP_NAME, APP_BINARY, NODE_NAME]
+            .into_iter()
+            .find_map(|key| {
+                let value = proplist.get(key)?;
+                self.registry.resolve_process_exact(&value.to_lowercase())
+            })
+            .or_else(|| self.registry.resolve_exact(&VolumeTarget::Unmapped))
     }
 }
 
@@ -185,6 +273,33 @@ fn match_process(name: &str, sink_input_info: &SinkInputInfo) -> bool {
         .is_some_and(|value| value.eq_ignore_ascii_case(name));
 
     app_name_match || app_binary_match || node_name_match
+}
+
+async fn subscription_task(
+    adapter: PulseAudioAdapter,
+    mut sub: Subscription,
+    shutdown: CancellationToken,
+) {
+    loop {
+        let event = tokio::select! {
+            () = shutdown.cancelled() => break,
+            event = sub.recv() => event,
+        };
+
+        match event {
+            Some(event) => {
+                // spawn a new task to continue processing events instead of waiting for this one to complete.
+                let handler_adapter = adapter.clone();
+                tokio::spawn(async move {
+                    handler_adapter.handle_subscription_event(event).await;
+                });
+            }
+            // sender was dropped, shouldn't happen, but don't spin forever if it does.
+            None => break,
+        }
+    }
+
+    log::debug!("pulseaudio subscription task shut down");
 }
 
 impl From<NormalizedVolume> for Volume {
