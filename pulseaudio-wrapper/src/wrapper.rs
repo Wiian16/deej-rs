@@ -1,13 +1,16 @@
 use std::sync::Arc;
 
-use futures::channel::{mpsc, oneshot};
+use futures::{
+    StreamExt,
+    channel::{mpsc, oneshot},
+};
 use libpulse_binding::{callbacks::ListResult, context::Context, volume::ChannelVolumes};
 
 use crate::{
     dispatcher::{SubDispatcher, SubscriptionId},
     error::PulseError,
     inner::{Command, PulseInner},
-    types::{SinkInfo, SinkInputInfo, SourceInfo, SubscriptionEvent},
+    types::{InterestMaskSet, SinkInfo, SinkInputInfo, SourceInfo, SubscriptionEvent},
 };
 
 /// Expands to a `move` closure that collects every `ListResult::Item` into a `Vec` (converting it via `From`) and
@@ -71,10 +74,24 @@ impl PulseWrapper {
     ///
     /// Returns [`PulseError`] if the worker thread fails to spawn. See type for more information.
     pub async fn new(name: String) -> Result<Self, PulseError> {
-        Ok(Self {
-            inner: PulseInner::new(name).await?,
-            dispatcher: SubDispatcher::new(),
-        })
+        let inner = PulseInner::new(name).await?;
+        let dispatcher = SubDispatcher::new();
+
+        // Register the subscription callback to dispatcher.dispatch()
+        let callback_dispatcher = dispatcher.clone();
+        inner.send(Command::Run(Box::new(move |ctx| {
+            ctx.set_subscribe_callback(Some(Box::new(move |facility, operation, index| {
+                if let (Some(facility), Some(operation)) = (facility, operation) {
+                    callback_dispatcher.dispatch(SubscriptionEvent {
+                        facility,
+                        operation,
+                        index,
+                    });
+                }
+            })));
+        })));
+
+        Ok(Self { inner, dispatcher })
     }
 
     /// Sends a closure to the worker thread and awaits the result it sends back.
@@ -219,11 +236,97 @@ impl PulseWrapper {
         })
         .await
     }
+
+    /// Creates a new subscription to events from [facilities](pulseaudio-wrapper::types::Facility) specified in `mask`.
+    ///
+    /// Returns a [`Subscription`] handle. Call [`Subscription::recv`] to await matching events. Dropping the handle
+    /// automatically unsubscribes, and (if no other subscriber still wants them) tells the server to stop sending
+    /// events for the facilities it held.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PulseError`] if updating the server's subscription mask fails, or the connection fails during the
+    /// operation. See type for more information.
+    pub async fn subscribe(&self, mask: InterestMaskSet) -> Result<Subscription, PulseError> {
+        let result = self.dispatcher.register(mask);
+
+        if result.grew
+            && let Err(err) = self.update_subscription_mask().await
+        {
+            // Don't leave a registered mask when the update failed to apply.
+            self.dispatcher.unregister(result.id);
+            return Err(err);
+        }
+
+        Ok(Subscription {
+            id: result.id,
+            wrapper: self.clone(),
+            rx: result.rx,
+        })
+    }
+
+    /// Called when [`Subscription`]s are dropped.
+    ///
+    /// Unregisters the corresponding mask from the dispatcher and drops the corresponding sender. Because this method
+    /// is called from [`Drop::drop`], it should be async or fail. We use [`PulseInner::send`] for this and don't
+    /// listen to the callback to accomplish this. See note in function body for more info.  
+    fn unsubscribe(&self, id: SubscriptionId) {
+        let shrank = self.dispatcher.unregister(id);
+
+        if shrank {
+            let mask = self.dispatcher.current_mask();
+
+            // self.inner.send is a non-async function, all we want to do when dropping is fire-and-forget updating the
+            // mask. If it fails to update, no events will be missed, we only risk filtering out extraneous events.
+            // If there is an issue with communicating with the server, it can be handled next time a crucial function
+            // needs to be run.
+            self.inner.send(Command::Run(Box::new(move |ctx| {
+                ctx.subscribe(mask.into(), |_| {});
+            })));
+        }
+    }
+
+    /// Pushes the dispatcher's current interest mask to the server.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PulseError`] if updating the mask fails, or the connection fails during the operation. See type for
+    /// more information.
+    pub async fn update_subscription_mask(&self) -> Result<(), PulseError> {
+        let mask = self.dispatcher.current_mask();
+        self.run(move |ctx, tx| {
+            ctx.subscribe(mask.into(), success_callback(tx));
+        })
+        .await
+    }
 }
 pub struct Subscription {
     id: SubscriptionId,
     wrapper: PulseWrapper,
     rx: mpsc::Receiver<SubscriptionEvent>,
+}
+
+/// A subscription to `PulseAudio` events matching the [`InterestMaskSet`] it was created with.
+///
+/// Call [`recv`](Self::recv) to await the next matching event.
+///
+/// Automatically unsubscribes when dropped. The local registration is removed synchronously, and if that was the last
+/// subscriber interested in one of it's facilities, an update is enqueued on the worker thread to tell the server to
+/// stop sending those events.
+impl Subscription {
+    /// Awaits the next event matching this subscription's interest mask.
+    ///
+    /// Returns `None` once the dispatcher's sender half is gone (subscription has been torn down). This shouldn't
+    /// happen in practice while the `Subscription` is still alive, since only it's own `Drop` removes it.
+    pub async fn recv(&mut self) -> Option<SubscriptionEvent> {
+        self.rx.next().await
+    }
+}
+
+impl Drop for Subscription {
+    fn drop(&mut self) {
+        self.wrapper.unsubscribe(self.id);
+    }
 }
 
 /// Wrap a one-shot sender into the `FnMut(bool)` shape every set, move, and kill introspection calls want for their
