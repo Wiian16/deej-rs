@@ -172,7 +172,7 @@ mod tests {
 
     fn subscription_event(facility: Facility) -> SubscriptionEvent {
         SubscriptionEvent {
-            facility: facility,
+            facility,
             operation: Operation::New,
             index: 0,
         }
