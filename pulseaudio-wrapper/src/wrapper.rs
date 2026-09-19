@@ -174,6 +174,22 @@ impl PulseWrapper {
         .await
     }
 
+    /// Get a source connected to the `PulseAudio` server by index.
+    ///
+    /// # Errors
+    ///
+    /// If the source cannot be found, returns [`PulseError::NotFound`].
+    ///
+    /// Returns [`PulseError`] if the operation fails or the connection fails during the operation. See type for more
+    /// information.
+    pub async fn source_by_index(&self, index: u32) -> Result<SourceInfo, PulseError> {
+        self.run(move |ctx, tx| {
+            ctx.introspect()
+                .get_source_info_by_index(index, single_collector!(tx));
+        })
+        .await
+    }
+
     /// Set a source's volume by index.
     ///
     /// See [`ChannelVolumes`] for information on volume information.
@@ -210,6 +226,22 @@ impl PulseWrapper {
             let _ = ctx
                 .introspect()
                 .get_sink_input_info_list(list_collector!(tx));
+        })
+        .await
+    }
+
+    /// Get a sink input connected to the `PulseAudio` server by index.
+    ///
+    /// # Errors
+    ///
+    /// If the sink input cannot be found, returns [`PulseError::NotFound`].
+    ///
+    /// Returns [`PulseError`] if the operation fails or the connection fails during the operation. See type for more
+    /// information.
+    pub async fn sink_input_by_index(&self, index: u32) -> Result<SinkInputInfo, PulseError> {
+        self.run(move |ctx, tx| {
+            ctx.introspect()
+                .get_sink_input_info(index, single_collector!(tx));
         })
         .await
     }
