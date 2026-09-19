@@ -309,7 +309,7 @@ impl From<&introspect::SinkInputInfo<'_>> for SinkInputInfo {
     }
 }
 
-/// A subscription received from a [Subscription](libpulse_binding::Subscription).
+/// A subscription received from a [Subscription](pulseaudio-wrapper::Subscription).
 ///
 /// Represents a facility (the object that created the event), operation (the type of event), and an index of the
 /// specific device.
