@@ -60,9 +60,9 @@ fn run() -> anyhow::Result<()> {
         };
 
         'outer: loop {
-            let adapter = Arc::new(PulseAudioAdapter::new(shutdown.clone()).await?);
-
             let service_token = shutdown.child_token();
+            let adapter = Arc::new(PulseAudioAdapter::new(service_token.clone()).await?);
+
             let service = tokio::spawn(deej_lib::service::run(
                 service_config.clone(),
                 adapter.clone(),
