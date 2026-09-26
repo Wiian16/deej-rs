@@ -68,7 +68,7 @@ impl PulseAudioAdapter {
 
         if let Err(err) = result {
             log::warn!(
-                "failed to new {:?} (index {}): {err:#}",
+                "failed to update {:?} (index {}): {err:#}",
                 event.facility, // FIXME: would rather use display here, not debug, but display isn't implemented
                 event.index
             );
