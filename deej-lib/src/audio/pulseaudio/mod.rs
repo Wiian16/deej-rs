@@ -2,8 +2,8 @@ use async_trait::async_trait;
 use pulseaudio_wrapper::{
     PulseError, PulseWrapper, Subscription,
     types::{
-        Facility, InterestMask, InterestMaskSetBuilder, Operation, SinkInfo, SinkInputInfo,
-        SourceInfo, SubscriptionEvent, Volume,
+        ChannelVolumes, Facility, InterestMask, InterestMaskSetBuilder, Operation, SinkInfo,
+        SinkInputInfo, SourceInfo, SubscriptionEvent, Volume,
     },
 };
 use tokio_util::sync::CancellationToken;
@@ -12,6 +12,9 @@ use crate::audio::{
     AudioAdapter, AudioAdapterError, NormalizedVolume, VolumeTarget,
     volume_registry::VolumeRegistry,
 };
+
+#[allow(clippy::as_conversions)]
+const PA_VOLUME_NORM: u64 = Volume::NORMAL.0 as u64;
 
 // Property keys to filter processes by.
 const APP_NAME: &str = "application.name";
@@ -78,6 +81,11 @@ impl PulseAudioAdapter {
         };
 
         let sink = self.wrapper.sink_by_index(index).await?;
+
+        if volume_is_already_correct(&sink.volume, volume.into(), Some(sink.n_volume_steps)) {
+            return Ok(());
+        }
+
         let mut volumes = sink.volume;
         volumes.set(volumes.len(), volume.into());
         self.wrapper.set_sink_volume(index, volumes).await
@@ -89,6 +97,11 @@ impl PulseAudioAdapter {
         };
 
         let source = self.wrapper.source_by_index(index).await?;
+
+        if volume_is_already_correct(&source.volume, volume.into(), Some(source.n_volume_steps)) {
+            return Ok(());
+        }
+
         let mut volumes = source.volume;
         volumes.set(volumes.len(), volume.into());
         self.wrapper.set_source_volume(index, volumes).await
@@ -100,6 +113,10 @@ impl PulseAudioAdapter {
         let Some(volume) = self.resolve_stream_volume(&stream) else {
             return Ok(());
         };
+
+        if volume_is_already_correct(&stream.volume, volume.into(), None) {
+            return Ok(());
+        }
 
         let mut volumes = stream.volume;
         volumes.set(volumes.len(), volume.into());
@@ -273,6 +290,51 @@ fn match_process(name: &str, sink_input_info: &SinkInputInfo) -> bool {
         .is_some_and(|value| value.eq_ignore_ascii_case(name));
 
     app_name_match || app_binary_match || node_name_match
+}
+
+/// Converts `volume` to a new quantized volume when given `steps`, typically from [`SinkInfo`] or [`SourceInfo`]
+/// `n_volume_steps` field.
+#[allow(
+    clippy::arithmetic_side_effects,
+    clippy::as_conversions,
+    clippy::cast_possible_truncation
+)]
+fn hardware_step(volume: Volume, steps: u32) -> Volume {
+    let intervals = u64::from(steps - 1);
+    let step = (u64::from(volume.0) * intervals + PA_VOLUME_NORM / 2) / PA_VOLUME_NORM;
+    Volume(step.min(intervals).max(u64::from(u16::MAX)) as u32)
+}
+
+/// Determines if an object's volume is already at the target volume considering it's discrete volume steps.
+///
+/// For objects that don't have discrete volume steps, such as `SinkInput`, pass `None` for `n_volume_steps`.
+///
+/// [`SinkInfo`] and [`SourceInfo`]'s `n_volume_steps` indicate how many discrete steps a device may have if it doesn't
+/// support arbitrary volume. This leaves 3 cases:
+///
+/// 1. `n_volume_steps == 1`: only one state, all volumes are equivalent
+///
+/// 2. `2 <= n_volume_steps <= 65536`: some discrete number of steps, convert target volume to quantized volume based on
+///    steps and compare
+///
+/// 3. `n_volume_steps == 65537`: supports arbitrary volume, compare volumes as-is
+fn volume_is_already_correct(
+    current: &ChannelVolumes,
+    target: Volume,
+    n_volume_steps: Option<u32>,
+) -> bool {
+    match n_volume_steps {
+        Some(1) => true,
+        Some(n @ 2..=65_536) => {
+            let target_step = hardware_step(target, n);
+
+            current
+                .get()
+                .iter()
+                .all(|current| hardware_step(*current, n) == target_step)
+        }
+        _ => current.get().iter().all(|current| *current == target),
+    }
 }
 
 async fn subscription_task(
