@@ -94,7 +94,7 @@ The binary lands at `target/release/deej-rs`.
 ```sh
 deej-rs                                      # looks for config.yaml next to the executable
 deej-rs --config ~/.config/deej/config.yaml  # Provide  a config file from somewhere else on your disk
-deej-rs  -- verbose                          # trace-level logs, useful for debugging serial
+deej-rs  --verbose...                        # selectable log levels, useful for debugging serial
 ```
 
 Without `--verbose`, logging is quiet: warnings and errors only.
