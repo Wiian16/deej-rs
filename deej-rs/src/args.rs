@@ -12,7 +12,7 @@ pub struct Args {
     #[arg(short, long)]
     config: Option<PathBuf>,
 
-    /// Suppress all application logs except for warning
+    /// Suppress all application logs except for errors
     #[arg(short, long, conflicts_with = "verbose")]
     pub quiet: bool,
 
