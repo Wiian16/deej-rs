@@ -47,6 +47,8 @@ rather than shelling out, and it's structured so other audio backends can be add
 - **Inverted sliders**: via `invert_sliders`.
 - **Live config reload**: edits to `config.yaml` are picked up without restarting the process.
 - **Graceful shutdown**: handles `SIGINT` and `SIGTERM` cleanly.
+- **PulseAudio subscriptions**: set an app's volume when its stream is first detected, so an app launched after you
+  moved the slider still picks up the right level.
 
 ### New
 
@@ -57,8 +59,6 @@ rather than shelling out, and it's structured so other audio backends can be add
 
 ### Roadmap
 
-- **PulseAudio subscriptions**: set an app's volume when its stream is first detected, so an app launched after you
-  moved the slider still picks up the right level.
 - **Notifications**: alert the user about critical issues (lost serial device, dead PulseAudio connection) instead of
   only logging issues.
 - **Packages for Linux Distributions.**
