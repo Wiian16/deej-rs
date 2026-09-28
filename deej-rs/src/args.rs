@@ -4,6 +4,7 @@ use std::{env, path::PathBuf};
 
 use anyhow::Context;
 use clap::Parser;
+use log::LevelFilter;
 
 #[derive(Parser, Debug)]
 pub struct Args {
@@ -11,9 +12,15 @@ pub struct Args {
     #[arg(short, long)]
     config: Option<PathBuf>,
 
-    /// Show verbose logs (useful for debugging serial)
-    #[arg(short, long)]
-    pub verbose: bool,
+    /// Suppress all application logs except for warning
+    #[arg(short, long, conflicts_with = "verbose")]
+    pub quiet: bool,
+
+    /// Increase logging verbosity (useful for debugging serial).
+    ///
+    /// Ex: *none* (error, warn), -v (error, warn, info), -vv (error, warn, info, debug), -vvv (error warn, info, debug, trace)
+    #[arg(short, long, action = clap::ArgAction::Count)]
+    pub verbose: u8,
 }
 
 impl Args {
@@ -34,6 +41,19 @@ impl Args {
                 .context("failed to determine the executable's directory")?;
 
             Ok(exe_dir.join("config.yaml"))
+        }
+    }
+
+    pub const fn log_level(&self) -> LevelFilter {
+        if self.quiet {
+            return LevelFilter::Error;
+        }
+
+        match self.verbose {
+            0 => LevelFilter::Warn,
+            1 => LevelFilter::Info,
+            2 => LevelFilter::Debug,
+            _ => LevelFilter::Trace,
         }
     }
 }

@@ -28,7 +28,11 @@ fn main() {
 fn run() -> anyhow::Result<()> {
     let args = Args::parse();
     let config_path = args.get_config_path()?;
-    setup_logger(args.verbose)?;
+    setup_logger(args.log_level())?;
+
+    log::trace!("Set up logger with log level: {}", args.log_level());
+    log::debug!("parsed CLI args: {args:#?}");
+    log::debug!("got config path: {}", config_path.to_string_lossy());
 
     let mut service_config = config::load(&config_path)?;
     log::debug!("loaded config: {service_config:#?}");
@@ -123,13 +127,7 @@ async fn wait_for_shutdown_signal() -> Result<(), std::io::Error> {
     Ok(())
 }
 
-fn setup_logger(verbose: bool) -> Result<(), log::SetLoggerError> {
-    let log_level = if verbose {
-        LevelFilter::Trace
-    } else {
-        LevelFilter::Warn
-    };
-
+fn setup_logger(log_level: LevelFilter) -> Result<(), log::SetLoggerError> {
     let config = ConfigBuilder::new()
         .set_target_level(LevelFilter::Off)
         .set_thread_level(LevelFilter::Off)
