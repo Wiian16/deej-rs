@@ -53,7 +53,6 @@ fn proplist_to_hashmap(list: &libpulse_binding::proplist::Proplist) -> HashMap<B
 }
 
 /// A snapshot of a `PulseAudio` sink.
-#[allow(unused)]
 #[derive(Debug, Clone)]
 pub struct SinkInfo {
     /// The sink's numeric index. Stable for the lifetime of the sink.
@@ -131,7 +130,6 @@ impl From<&introspect::SinkInfo<'_>> for SinkInfo {
 /// A port belonging to a [`SinkInfo`] or [`SourceInfo`].
 ///
 /// `libpulse_binding` models sink ports and source ports as two distinct (but identical) types. This crate merges them.
-#[allow(unused)]
 #[derive(Debug, Clone)]
 pub struct DevicePort {
     /// The port's short, stable name.
@@ -167,7 +165,6 @@ impl From<&introspect::SourcePortInfo<'_>> for DevicePort {
 }
 
 /// A snapshot of a `PulseAudio` source.
-#[allow(unused)]
 #[derive(Debug, Clone)]
 pub struct SourceInfo {
     /// The source's numeric index. Stable for the lifetime of the source, reusable afterwards.
