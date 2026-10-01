@@ -195,8 +195,6 @@ impl AudioAdapter for PulseAudioAdapter {
                         .await
                         .map_err(|err| AudioAdapterError::new(target.clone(), err))?;
                 }
-
-                Ok(())
             }
             VolumeTarget::Mic => {
                 let sources: Vec<SourceInfo> = self
@@ -216,8 +214,6 @@ impl AudioAdapter for PulseAudioAdapter {
                         .await
                         .map_err(|err| AudioAdapterError::new(target.clone(), err))?;
                 }
-
-                Ok(())
             }
             VolumeTarget::Process(ref name) => {
                 let streams = self
@@ -242,8 +238,6 @@ impl AudioAdapter for PulseAudioAdapter {
                         .await
                         .map_err(|err| AudioAdapterError::new(target.clone(), err))?;
                 }
-
-                Ok(())
             }
             VolumeTarget::Unmapped => {
                 let streams = self
@@ -265,10 +259,10 @@ impl AudioAdapter for PulseAudioAdapter {
                         .await
                         .map_err(|err| AudioAdapterError::new(target.clone(), err))?;
                 }
-
-                Ok(())
             }
         }
+
+        Ok(())
     }
 }
 
