@@ -170,6 +170,7 @@ mod smoother_tests {
         );
     }
 
+    #[allow(clippy::as_conversions)]
     #[test]
     fn real_movement_emits() {
         let mut s = SliderSmoother::new(NoiseReduction::Default);
@@ -178,6 +179,6 @@ mod smoother_tests {
             s.update(&frame(&[0.8])); // fill the averaging window
         }
         let changed = s.update(&frame(&[0.8]));
-        assert!(changed.is_empty()); // already converged and reported by now
+        assert_eq!(changed, [] as [(usize, NormalizedVolume); 0]); // already converged and reported by now
     }
 }
