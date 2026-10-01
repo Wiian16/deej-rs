@@ -6,6 +6,7 @@ on:
   pull_request:
   schedule:
     - cron: '0 6 * * 1' # weekly, Monday 06:00 UTC, catches new advisories on quiet weeks
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
