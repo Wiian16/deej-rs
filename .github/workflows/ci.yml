@@ -60,7 +60,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libpulse-dev
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo test --workspace
+      - run: cargo test --workspace --locked
 
   # Runs on a schedule too, so freshly-disclosed advisories get caught
   # even on weeks with no new commits.
