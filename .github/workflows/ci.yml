@@ -62,16 +62,25 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo test --workspace --locked
 
-  # Runs on a schedule too, so freshly-disclosed advisories get caught
-  # even on weeks with no new commits.
-  audit:
-    name: Security audit
+  doc:
+    name: Docs
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+      - name: Install PulseAudio dev headers
+        run: sudo apt-get update && sudo apt-get install -y libpulse-dev
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-        with:
-          key: audit
-      - run: cargo install cargo-audit --locked
-      - run: cargo audit
+      - run: cargo doc --workspace --no-deps --locked
+        env:
+          RUSTDOCFLAGS: -D warnings
+
+  deny:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
