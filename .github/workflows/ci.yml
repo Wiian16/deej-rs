@@ -15,6 +15,7 @@ env:
 jobs:
   fmt:
     name: Format
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,6 +26,7 @@ jobs:
 
   clippy:
     name: Clippy
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -40,6 +42,7 @@ jobs:
 
   test:
     name: Test
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
