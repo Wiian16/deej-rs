@@ -369,3 +369,211 @@ impl From<NormalizedVolume> for Volume {
         Self((val.0 * Self::NORMAL.0 as f32).round() as u32)
     }
 }
+
+#[cfg(test)]
+const NORM: u32 = PA_VOLUME_NORM as u32;
+
+#[cfg(test)]
+mod test_hardware_step {
+    use super::*;
+
+    #[test]
+    fn single_step() {
+        for volume in [0, 1, NORM / 2, NORM, u32::MAX] {
+            assert_eq!(
+                hardware_step(Volume(volume), 1),
+                Volume(0),
+                "devices with a single step should always map to 0 volume"
+            )
+        }
+    }
+
+    #[test]
+    fn two_steps() {
+        // Should round about the midpoint
+        assert_eq!(
+            hardware_step(Volume(0), 2),
+            Volume(0),
+            "volumes under the midpoint should map to 0 volume at 2 hardware steps"
+        );
+        assert_eq!(
+            hardware_step(Volume(NORM / 2 - 1), 2),
+            Volume(0),
+            "volumes under the midpoint should round down to 0 at 2 hardware steps"
+        );
+        assert_eq!(
+            hardware_step(Volume(NORM / 2), 2),
+            Volume(1),
+            "volumes at the midpoint should round up to 1 at 2 hardware steps"
+        );
+        assert_eq!(
+            hardware_step(Volume(NORM), 2),
+            Volume(1),
+            "volumes above the midpoint should map to 1 at 2 hardware steps"
+        );
+    }
+
+    #[test]
+    fn three_steps() {
+        // intervals = 2, so midpoints are at NORM/4 and 3*NORM/4
+        assert_eq!(
+            hardware_step(Volume(NORM / 4 - 1), 3),
+            Volume(0),
+            "volumes under the first midpoint should round to 0 at 3 hardware steps"
+        );
+        assert_eq!(
+            hardware_step(Volume(NORM / 4), 3),
+            Volume(1),
+            "volumes at the first midpoint should map to 1 at 3 hardware steps"
+        );
+        assert_eq!(
+            hardware_step(Volume(3 * NORM / 4 - 1), 3),
+            Volume(1),
+            "volumes below the second midpoint should map to 1 at 3 hardware steps"
+        );
+        assert_eq!(
+            hardware_step(Volume(3 * NORM / 4), 3),
+            Volume(2),
+            "volumes at the second midpoint should map to 2 at 3 hardware steps"
+        );
+    }
+
+    #[test]
+    fn overamplified_clamps() {
+        assert_eq!(
+            hardware_step(Volume(NORM + 1), 11),
+            Volume(10),
+            "volumes over normal should clamp to the max hardware step"
+        );
+        assert_eq!(
+            hardware_step(Volume(NORM * 2), 11),
+            Volume(10),
+            "volumes over normal should clamp to the max hardware step"
+        );
+        assert_eq!(
+            hardware_step(Volume(u32::MAX), 11),
+            Volume(10),
+            "volumes over normal should clamp to the max hardware step"
+        );
+    }
+
+    #[test]
+    fn max_steps() {
+        assert_eq!(
+            hardware_step(Volume(0), 65_536),
+            Volume(0),
+            "volumes at max hardware steps should stay in the normal range"
+        );
+        assert_eq!(
+            hardware_step(Volume(NORM), 65_536),
+            Volume(65_535),
+            "volumes at max hardware steps should stay in the normal range"
+        );
+    }
+}
+
+#[cfg(test)]
+mod test_volume_is_already_correct {
+    use super::*;
+
+    /// Build a [`ChannelVolumes`] with one entry per value in `volumes`.
+    fn channels(volumes: &[u32]) -> ChannelVolumes {
+        let mut cv = ChannelVolumes::default();
+        cv.set(volumes.len() as u8, Volume(0));
+
+        for (slot, volume) in cv.get_mut().iter_mut().zip(volumes) {
+            *slot = Volume(*volume);
+        }
+
+        cv
+    }
+
+    #[test]
+    fn none_compares_exactly() {
+        let current = channels(&[1000, 1000]);
+
+        assert!(
+            volume_is_already_correct(&current, Volume(1000), None),
+            "devices with arbitrary volume support should compare exactly"
+        );
+        assert!(
+            !volume_is_already_correct(&current, Volume(1001), None),
+            "devices with arbitrary volume support should compare exactly"
+        );
+        assert!(
+            !volume_is_already_correct(&current, Volume(999), None),
+            "devices with arbitrary volume support should compare exactly"
+        );
+    }
+
+    #[test]
+    fn none_fails_if_any_channel_fails() {
+        let current = channels(&[1000, 1000, 999]);
+
+        assert!(
+            !volume_is_already_correct(&current, Volume(1000), None),
+            "any channel that is not equal should fail"
+        );
+    }
+
+    #[test]
+    fn one_step_always_correct() {
+        let current = channels(&[0, NORM, u32::MAX]);
+
+        assert!(
+            volume_is_already_correct(&current, Volume(12345), Some(1)),
+            "devices only supporting one volume step should always return true"
+        )
+    }
+
+    #[test]
+    fn discrete_steps_treat_same_bucket_as_equal() {
+        // 3 steps: 0 and NORM/4 - 1 both land on step 0
+        let cur = channels(&[0, NORM / 4 - 1]);
+        assert!(
+            volume_is_already_correct(&cur, Volume(100), Some(3)),
+            "volumes that land in the same interval with discrete steps should be equal"
+        );
+    }
+
+    #[test]
+    fn discrete_steps_detect_different_bucket() {
+        let cur = channels(&[NORM / 4, NORM / 4]); // step 1
+        assert!(
+            !volume_is_already_correct(&cur, Volume(0), Some(3)),
+            "volumes that land in different intervals with discrete steps should not be equal"
+        );
+    }
+
+    #[test]
+    fn discrete_steps_one_channel_in_wrong_bucket_fails() {
+        let cur = channels(&[0, 0, NORM]);
+        assert!(
+            !volume_is_already_correct(&cur, Volume(0), Some(3)),
+            "any channel that is not equal should fail"
+        );
+    }
+
+    #[test]
+    fn match_arm_boundaries() {
+        let cur = channels(&[NORM / 2]);
+        let target = Volume(NORM / 2 + 1);
+
+        // 2 and 65_536 are quantized: the values are near-equal but not identical
+        assert!(volume_is_already_correct(&cur, target, Some(2)));
+        assert!(
+            volume_is_already_correct(&cur, target, Some(65_536))
+                == (hardware_step(Volume(NORM / 2), 65_536) == hardware_step(target, 65_536))
+        );
+
+        // 65_537 (arbitrary volume) and out-of-range values compare exactly
+        assert!(!volume_is_already_correct(&cur, target, Some(65_537)));
+        assert!(!volume_is_already_correct(&cur, target, Some(0)));
+        assert!(!volume_is_already_correct(&cur, target, Some(100_000)));
+        assert!(volume_is_already_correct(
+            &cur,
+            Volume(NORM / 2),
+            Some(65_537)
+        ));
+    }
+}
