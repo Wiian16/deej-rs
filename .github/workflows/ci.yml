@@ -24,6 +24,7 @@ jobs:
     name: Format
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -35,6 +36,7 @@ jobs:
     name: Clippy
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       # pulseaudio-wrapper links against libpulse, so the dev headers
@@ -51,6 +53,7 @@ jobs:
     name: Test
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - name: Install PulseAudio dev headers
