@@ -370,6 +370,7 @@ impl From<NormalizedVolume> for Volume {
     }
 }
 
+#[allow(clippy::cast_possible_truncation, clippy::as_conversions)]
 #[cfg(test)]
 const NORM: u32 = PA_VOLUME_NORM as u32;
 
@@ -384,7 +385,7 @@ mod test_hardware_step {
                 hardware_step(Volume(volume), 1),
                 Volume(0),
                 "devices with a single step should always map to 0 volume"
-            )
+            );
         }
     }
 
@@ -476,6 +477,7 @@ mod test_hardware_step {
 mod test_volume_is_already_correct {
     use super::*;
 
+    #[allow(clippy::cast_possible_truncation, clippy::as_conversions)]
     /// Build a [`ChannelVolumes`] with one entry per value in `volumes`.
     fn channels(volumes: &[u32]) -> ChannelVolumes {
         let mut cv = ChannelVolumes::default();
@@ -523,7 +525,7 @@ mod test_volume_is_already_correct {
         assert!(
             volume_is_already_correct(&current, Volume(12345), Some(1)),
             "devices only supporting one volume step should always return true"
-        )
+        );
     }
 
     #[test]
@@ -561,10 +563,13 @@ mod test_volume_is_already_correct {
 
         // 2 and 65_536 are quantized: the values are near-equal but not identical
         assert!(volume_is_already_correct(&cur, target, Some(2)));
-        assert!(
-            volume_is_already_correct(&cur, target, Some(65_536))
-                == (hardware_step(Volume(NORM / 2), 65_536) == hardware_step(target, 65_536))
-        );
+        #[allow(clippy::manual_assert_eq)]
+        {
+            assert!(
+                volume_is_already_correct(&cur, target, Some(65_536))
+                    == (hardware_step(Volume(NORM / 2), 65_536) == hardware_step(target, 65_536))
+            );
+        }
 
         // 65_537 (arbitrary volume) and out-of-range values compare exactly
         assert!(!volume_is_already_correct(&cur, target, Some(65_537)));
