@@ -296,7 +296,7 @@ fn match_process(name: &str, sink_input_info: &SinkInputInfo) -> bool {
 fn hardware_step(volume: Volume, steps: u32) -> Volume {
     let intervals = u64::from(steps - 1);
     let step = (u64::from(volume.0) * intervals + PA_VOLUME_NORM / 2) / PA_VOLUME_NORM;
-    Volume(step.min(intervals).max(u64::from(u16::MAX)) as u32)
+    Volume(step.min(intervals) as u32)
 }
 
 /// Determines if an object's volume is already at the target volume considering it's discrete volume steps.
