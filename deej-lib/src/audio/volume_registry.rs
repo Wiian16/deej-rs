@@ -107,7 +107,7 @@ impl Default for VolumeRegistry {
 
 #[derive(Debug)]
 struct VolumeRegistryInner {
-    process_map: HashMap<Box<str>, NormalizedVolume>,
+    process_map: HashMap<ProcessName, NormalizedVolume>,
     master: Option<NormalizedVolume>,
     mic: Option<NormalizedVolume>,
     unmapped: Option<NormalizedVolume>,
@@ -131,13 +131,13 @@ impl VolumeRegistryInner {
         match *target {
             VolumeTarget::Master => self.master,
             VolumeTarget::Mic => self.mic,
-            VolumeTarget::Process(ref process_name) => self.resolve_process(process_name.name()),
+            VolumeTarget::Process(ref process_name) => self.resolve_process(process_name),
             VolumeTarget::Unmapped => self.unmapped,
         }
     }
 
     /// Resolve a process volume, falling back to unmapped if it isn't registered.
-    fn resolve_process(&self, process: &str) -> Option<NormalizedVolume> {
+    fn resolve_process(&self, process: &ProcessName) -> Option<NormalizedVolume> {
         let mapped = self.process_map.get(process).copied();
 
         if mapped.is_some() {
@@ -154,15 +154,13 @@ impl VolumeRegistryInner {
         match *target {
             VolumeTarget::Master => self.master,
             VolumeTarget::Mic => self.mic,
-            VolumeTarget::Process(ref process_name) => {
-                self.resolve_process_exact(process_name.name())
-            }
+            VolumeTarget::Process(ref process_name) => self.resolve_process_exact(process_name),
             VolumeTarget::Unmapped => self.unmapped,
         }
     }
 
     /// Resolve a process volume, returns `None` if it isn't registered.
-    fn resolve_process_exact(&self, process: &str) -> Option<NormalizedVolume> {
+    fn resolve_process_exact(&self, process: &ProcessName) -> Option<NormalizedVolume> {
         self.process_map.get(process).copied()
     }
 
@@ -172,7 +170,7 @@ impl VolumeRegistryInner {
             VolumeTarget::Master => self.master = Some(volume),
             VolumeTarget::Mic => self.mic = Some(volume),
             VolumeTarget::Process(process_name) => {
-                let _ = self.process_map.insert(process_name.name().into(), volume);
+                let _ = self.process_map.insert(process_name, volume);
             }
             VolumeTarget::Unmapped => self.unmapped = Some(volume),
         }
@@ -275,7 +273,7 @@ mod tests {
             "Process map should have 1 entry"
         );
         assert_eq!(
-            registry.process_map.get("process1"),
+            registry.process_map.get(&ProcessName::new("process1")),
             Some(&NormalizedVolume::clamped(1.0)),
             "'process1' should be set to 1.0"
         );
@@ -290,12 +288,12 @@ mod tests {
             "Process map should have 2 entries"
         );
         assert_eq!(
-            registry.process_map.get("process1"),
+            registry.process_map.get(&ProcessName::new("process1")),
             Some(&NormalizedVolume::clamped(1.0)),
             "'process1' volume should not have changed"
         );
         assert_eq!(
-            registry.process_map.get("process2"),
+            registry.process_map.get(&ProcessName::new("process2")),
             Some(&NormalizedVolume::clamped(1.0)),
             "'process2' should be set to 1.0"
         );
@@ -310,12 +308,12 @@ mod tests {
             "Process map should have 2 entries"
         );
         assert_eq!(
-            registry.process_map.get("process1"),
+            registry.process_map.get(&ProcessName::new("process1")),
             Some(&NormalizedVolume::clamped(1.0)),
             "'process1' volume should not have changed"
         );
         assert_eq!(
-            registry.process_map.get("process2"),
+            registry.process_map.get(&ProcessName::new("process2")),
             Some(&NormalizedVolume::clamped(0.0)),
             "'process2' should be set to 0.0"
         );

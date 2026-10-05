@@ -226,7 +226,7 @@ impl AudioAdapter for PulseAudioAdapter {
 
                 let filtered: Vec<&SinkInputInfo> = streams
                     .iter()
-                    .filter(|stream| match_process(process_name.name(), stream))
+                    .filter(|stream| match_process(process_name, stream))
                     .collect();
 
                 for stream in filtered {
@@ -271,18 +271,18 @@ impl AudioAdapter for PulseAudioAdapter {
 ///
 /// Checks `application.name`, `application.process.binary`, and `node.name` from the proplist to match with `name`. If
 /// any one of those properties matches, the sink input is considered matched.
-fn match_process(name: &str, sink_input_info: &SinkInputInfo) -> bool {
+fn match_process(process: &ProcessName, sink_input_info: &SinkInputInfo) -> bool {
     let proplist = &sink_input_info.properties;
 
     let app_name_match = proplist
         .get(APP_NAME)
-        .is_some_and(|value| value.eq_ignore_ascii_case(name));
+        .is_some_and(|value| process.eq(&ProcessName::new(value.as_ref())));
     let app_binary_match = proplist
         .get(APP_BINARY)
-        .is_some_and(|value| value.eq_ignore_ascii_case(name));
+        .is_some_and(|value| process.eq(&ProcessName::new(value.as_ref())));
     let node_name_match = proplist
         .get(NODE_NAME)
-        .is_some_and(|value| value.eq_ignore_ascii_case(name));
+        .is_some_and(|value| process.eq(&ProcessName::new(value.as_ref())));
 
     app_name_match || app_binary_match || node_name_match
 }
