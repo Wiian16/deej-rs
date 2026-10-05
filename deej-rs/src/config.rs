@@ -2,7 +2,7 @@ use core::fmt;
 use std::{collections::HashMap, io, sync::Arc, time::Duration};
 
 use deej_lib::{
-    audio::VolumeTarget,
+    audio::{ProcessName, VolumeTarget},
     config::{NoiseReduction, ServiceConfig},
 };
 use notify_debouncer_full::{
@@ -71,8 +71,11 @@ pub enum RawSliderMapping {
 impl From<RawSliderMapping> for Vec<VolumeTarget> {
     fn from(raw: RawSliderMapping) -> Self {
         match raw {
-            RawSliderMapping::Target(name) => vec![resolve_special(name)],
-            RawSliderMapping::Targets(names) => names.into_iter().map(resolve_special).collect(),
+            RawSliderMapping::Target(ref name) => vec![resolve_special(name)],
+            RawSliderMapping::Targets(names) => names
+                .into_iter()
+                .map(|ref name| resolve_special(name))
+                .collect(),
         }
     }
 }
@@ -132,7 +135,7 @@ impl ConfigWatcher {
     }
 }
 
-fn resolve_special(name: Box<str>) -> VolumeTarget {
+fn resolve_special(name: &str) -> VolumeTarget {
     if name.eq_ignore_ascii_case("master") {
         VolumeTarget::Master
     } else if name.eq_ignore_ascii_case("mic") {
@@ -140,7 +143,7 @@ fn resolve_special(name: Box<str>) -> VolumeTarget {
     } else if name.eq_ignore_ascii_case("deej.unmapped") {
         VolumeTarget::Unmapped
     } else {
-        VolumeTarget::Process(name)
+        VolumeTarget::Process(ProcessName::new(name))
     }
 }
 
@@ -251,5 +254,49 @@ noise_reduction: default
         assert_eq!(config.com_port, "COM4".into());
         assert_eq!(config.baud_rate, 9600);
         assert!(matches!(config.noise_reduction, NoiseReduction::Default));
+    }
+
+    #[test]
+    fn names_deserialize_lowercase() {
+        // Ensure that all process names are lowercase when the config is deserialized into `ServiceConfig`
+        let yaml = r"
+            slider_mapping:
+                1:
+                    - PROCESS_NAME1
+                    - Process_name2
+                    - process_name3
+                    - pRocEsS_NaME4
+
+            invert_sliders: false
+
+            com_port: COM4
+            baud_rate: 9600
+
+            noise_reduction: default
+        ";
+
+        let config: ServiceConfig = serde_saphyr::from_str::<RawConfig>(yaml).unwrap().into();
+
+        assert_eq!(config.slider_mapping.len(), 1);
+        assert_ne!(config.slider_mapping.get(&1).unwrap().as_slice(), []);
+
+        let processes = config
+            .slider_mapping
+            .get(&1)
+            .unwrap()
+            .iter()
+            .filter_map(|target| match target {
+                VolumeTarget::Process(process) => Some(process),
+                _ => None,
+            });
+
+        assert_eq!(processes.clone().count(), 4);
+        processes.for_each(|process| {
+            process.chars().for_each(|char| {
+                if char.is_alphabetic() {
+                    assert!(char.is_lowercase());
+                }
+            });
+        });
     }
 }
