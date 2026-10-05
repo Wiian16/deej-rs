@@ -4,7 +4,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use crate::audio::{NormalizedVolume, VolumeTarget};
+use crate::audio::{NormalizedVolume, ProcessName, VolumeTarget};
 
 /// A thread-safe handle to a volume registry, capable of registering and resolving volume targets and their volumes.
 ///
@@ -43,7 +43,7 @@ impl VolumeRegistry {
     ///
     /// Will panic if the internal mutex is poisoned. See [poisoning](Mutex#poisoning).
     #[must_use]
-    pub fn resolve_process(&self, process: &str) -> Option<NormalizedVolume> {
+    pub fn resolve_process(&self, process: &ProcessName) -> Option<NormalizedVolume> {
         self.inner
             .lock()
             .expect("poisoned mutex")
@@ -71,7 +71,7 @@ impl VolumeRegistry {
     ///
     /// Will panic if the internal mutex is poisoned. See [poisoning](Mutex#poisoning).
     #[must_use]
-    pub fn resolve_process_exact(&self, process: &str) -> Option<NormalizedVolume> {
+    pub fn resolve_process_exact(&self, process: &ProcessName) -> Option<NormalizedVolume> {
         self.inner
             .lock()
             .expect("poisoned mutex")
@@ -131,7 +131,7 @@ impl VolumeRegistryInner {
         match *target {
             VolumeTarget::Master => self.master,
             VolumeTarget::Mic => self.mic,
-            VolumeTarget::Process(ref name) => self.resolve_process(name),
+            VolumeTarget::Process(ref process_name) => self.resolve_process(process_name.name()),
             VolumeTarget::Unmapped => self.unmapped,
         }
     }
@@ -154,7 +154,9 @@ impl VolumeRegistryInner {
         match *target {
             VolumeTarget::Master => self.master,
             VolumeTarget::Mic => self.mic,
-            VolumeTarget::Process(ref name) => self.resolve_process_exact(name),
+            VolumeTarget::Process(ref process_name) => {
+                self.resolve_process_exact(process_name.name())
+            }
             VolumeTarget::Unmapped => self.unmapped,
         }
     }
@@ -169,8 +171,8 @@ impl VolumeRegistryInner {
         match target {
             VolumeTarget::Master => self.master = Some(volume),
             VolumeTarget::Mic => self.mic = Some(volume),
-            VolumeTarget::Process(name) => {
-                let _ = self.process_map.insert(name, volume);
+            VolumeTarget::Process(process_name) => {
+                let _ = self.process_map.insert(process_name.name().into(), volume);
             }
             VolumeTarget::Unmapped => self.unmapped = Some(volume),
         }

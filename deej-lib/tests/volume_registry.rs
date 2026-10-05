@@ -1,4 +1,6 @@
-use deej_lib::audio::{NormalizedVolume, VolumeTarget, volume_registry::VolumeRegistry};
+use deej_lib::audio::{
+    NormalizedVolume, ProcessName, VolumeTarget, volume_registry::VolumeRegistry,
+};
 
 const PROCESS1: &str = "process1";
 const PROCESS2: &str = "process2";
@@ -111,8 +113,14 @@ fn test_resolve_process() {
         registry.resolve(&VolumeTarget::Process(PROCESS2.into())),
         Some(PROCESS2_VOLUME)
     );
-    assert_eq!(registry.resolve_process(PROCESS1), Some(PROCESS1_VOLUME));
-    assert_eq!(registry.resolve_process(PROCESS2), Some(PROCESS2_VOLUME));
+    assert_eq!(
+        registry.resolve_process(&ProcessName::new(PROCESS1)),
+        Some(PROCESS1_VOLUME)
+    );
+    assert_eq!(
+        registry.resolve_process(&ProcessName::new(PROCESS2)),
+        Some(PROCESS2_VOLUME)
+    );
 }
 
 #[test]
@@ -127,8 +135,8 @@ fn test_resolve_unmapped_process() {
         registry.resolve(&VolumeTarget::Process(PROCESS2.into())),
         None
     );
-    assert_eq!(registry.resolve_process(PROCESS1), None);
-    assert_eq!(registry.resolve_process(PROCESS2), None);
+    assert_eq!(registry.resolve_process(&ProcessName::new(PROCESS1)), None);
+    assert_eq!(registry.resolve_process(&ProcessName::new(PROCESS2)), None);
 
     registry.register(VolumeTarget::Unmapped, UNMAPPED_VOLUME);
 
@@ -140,8 +148,14 @@ fn test_resolve_unmapped_process() {
         registry.resolve(&VolumeTarget::Process(PROCESS2.into())),
         Some(UNMAPPED_VOLUME)
     );
-    assert_eq!(registry.resolve_process(PROCESS1), Some(UNMAPPED_VOLUME));
-    assert_eq!(registry.resolve_process(PROCESS2), Some(UNMAPPED_VOLUME));
+    assert_eq!(
+        registry.resolve_process(&ProcessName::new(PROCESS1)),
+        Some(UNMAPPED_VOLUME)
+    );
+    assert_eq!(
+        registry.resolve_process(&ProcessName::new(PROCESS2)),
+        Some(UNMAPPED_VOLUME)
+    );
 }
 
 #[test]
@@ -156,8 +170,14 @@ fn test_resolve_exact_unmapped_process() {
         registry.resolve_exact(&VolumeTarget::Process(PROCESS2.into())),
         None
     );
-    assert_eq!(registry.resolve_process_exact(PROCESS1), None);
-    assert_eq!(registry.resolve_process_exact(PROCESS2), None);
+    assert_eq!(
+        registry.resolve_process_exact(&ProcessName::new(PROCESS1)),
+        None
+    );
+    assert_eq!(
+        registry.resolve_process_exact(&ProcessName::new(PROCESS2)),
+        None
+    );
 
     registry.register(VolumeTarget::Unmapped, UNMAPPED_VOLUME);
 
@@ -169,6 +189,12 @@ fn test_resolve_exact_unmapped_process() {
         registry.resolve_exact(&VolumeTarget::Process(PROCESS2.into())),
         None
     );
-    assert_eq!(registry.resolve_process_exact(PROCESS1), None);
-    assert_eq!(registry.resolve_process_exact(PROCESS2), None);
+    assert_eq!(
+        registry.resolve_process_exact(&ProcessName::new(PROCESS1)),
+        None
+    );
+    assert_eq!(
+        registry.resolve_process_exact(&ProcessName::new(PROCESS2)),
+        None
+    );
 }

@@ -2,7 +2,7 @@ use core::fmt;
 use std::{collections::HashMap, io, sync::Arc, time::Duration};
 
 use deej_lib::{
-    audio::VolumeTarget,
+    audio::{ProcessName, VolumeTarget},
     config::{NoiseReduction, ServiceConfig},
 };
 use notify_debouncer_full::{
@@ -143,7 +143,7 @@ fn resolve_special(name: &str) -> VolumeTarget {
     } else if name.eq_ignore_ascii_case("deej.unmapped") {
         VolumeTarget::Unmapped
     } else {
-        VolumeTarget::Process(name.to_lowercase().into_boxed_str())
+        VolumeTarget::Process(ProcessName::new(name))
     }
 }
 

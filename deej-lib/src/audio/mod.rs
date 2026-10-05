@@ -1,14 +1,57 @@
 use async_trait::async_trait;
 use core::fmt;
+use std::{fmt::Display, ops::Deref};
 
 pub mod pulseaudio;
 pub mod volume_registry;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+/// Represents a process name for the deej app. Converts string to lowercase on creation.
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+pub struct ProcessName {
+    name: Box<str>,
+}
+
+impl ProcessName {
+    pub fn new(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into().to_lowercase().into(),
+        }
+    }
+
+    #[must_use]
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+}
+
+impl<T> From<T> for ProcessName
+where
+    T: Into<String>,
+{
+    fn from(value: T) -> Self {
+        Self::new(value)
+    }
+}
+
+impl Deref for ProcessName {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        &self.name
+    }
+}
+
+impl Display for ProcessName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.name.fmt(f)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum VolumeTarget {
     Master,
     Mic,
-    Process(Box<str>),
+    Process(ProcessName),
     Unmapped,
 }
 
