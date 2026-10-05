@@ -240,3 +240,14 @@ impl AudioAdapter for DummyAudioAdapter {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_process_name() {
+        let process = ProcessName::new("TeSt-PrOcEsS");
+        assert_eq!(process.name(), "test-process");
+    }
+}
