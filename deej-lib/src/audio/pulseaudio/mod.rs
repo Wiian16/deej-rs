@@ -2,8 +2,8 @@ use async_trait::async_trait;
 use pulseaudio_wrapper::{
     PulseError, PulseWrapper, Subscription,
     types::{
-        ChannelVolumes, Facility, InterestMask, InterestMaskSetBuilder, Operation, SinkInfo,
-        SinkInputInfo, SourceInfo, SubscriptionEvent, Volume,
+        ChannelVolumes, Facility, FacilityDisplay, InterestMask, InterestMaskSetBuilder, Operation,
+        SinkInfo, SinkInputInfo, SourceInfo, SubscriptionEvent, Volume,
     },
 };
 use tokio_util::sync::CancellationToken;
@@ -68,8 +68,8 @@ impl PulseAudioAdapter {
 
         if let Err(err) = result {
             log::warn!(
-                "failed to update {:?} (index {}): {err:#}",
-                event.facility, // FIXME: would rather use display here, not debug, but display isn't implemented
+                "failed to update {} (index {}): {err:#}",
+                FacilityDisplay(event.facility), // FIXME: would rather use display here, not debug, but display isn't implemented
                 event.index
             );
         }

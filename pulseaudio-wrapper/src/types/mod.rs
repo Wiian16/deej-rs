@@ -32,6 +32,7 @@ pub use libpulse_binding::volume::ChannelVolumes;
 pub use libpulse_binding::volume::Volume;
 
 use std::collections::HashMap;
+use std::fmt::Display;
 
 use libpulse_binding::context::introspect;
 
@@ -315,4 +316,30 @@ pub struct SubscriptionEvent {
     pub facility: Facility,
     pub operation: Operation,
     pub index: u32,
+}
+
+/// A newtype wrapper for displaying a [`Facility`].
+pub struct FacilityDisplay(pub Facility);
+
+impl Display for FacilityDisplay {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = match self.0 {
+            Facility::Sink => "sink",
+            Facility::Source => "source",
+            Facility::SinkInput => "sink input",
+            Facility::SourceOutput => "source output",
+            Facility::Module => "module",
+            Facility::Client => "client",
+            Facility::SampleCache => "sample cache",
+            Facility::Server => "server",
+            Facility::Card => "card",
+        };
+        f.write_str(str)
+    }
+}
+
+impl From<Facility> for FacilityDisplay {
+    fn from(value: Facility) -> Self {
+        Self(value)
+    }
 }
