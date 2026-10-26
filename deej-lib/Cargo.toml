@@ -8,7 +8,7 @@ license = "LGPL-3.0-or-later"
 pulseaudio-wrapper = { path = "../pulseaudio-wrapper" }
 async-trait = "0.1.92"
 futures = "0.3.34"
-tokio = { version = "1.53.1", features = ["macros", "rt", "sync", "time"] }
+tokio = { version = "1.54.1", features = ["macros", "rt", "sync", "time"] }
 tokio-serial = "5.5.0"
 tokio-util = { version = "0.7.19", features = ["codec"] }
 anyhow = "1.0.104"
