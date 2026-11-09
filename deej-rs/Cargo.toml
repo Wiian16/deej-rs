@@ -6,7 +6,7 @@ authors.workspace = true
 license = "GPL-3.0-or-later"
 
 [dependencies]
-anyhow = "1.0.104"
+anyhow = { workspace = true }
 clap = { version = "4.6.6", features = ["derive"] }
 deej-lib = { path = "../deej-lib" }
 log = { workspace = true }
@@ -14,8 +14,8 @@ notify-debouncer-full = "0.7.0"
 serde = { version = "1.0.229", features = ["derive"] }
 serde-saphyr = "1.2.0"
 simplelog = "0.12.2"
-tokio = { version = "1.54.1", features = ["rt", "signal", "macros"] }
-tokio-util = "0.7.19"
+tokio = { workspace = true, features = ["rt", "signal", "macros"] }
+tokio-util = { workspace = true }
 
 [lints]
 workspace = true

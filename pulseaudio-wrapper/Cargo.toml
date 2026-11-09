@@ -6,7 +6,7 @@ authors.workspace = true
 license = "LGPL-3.0-or-later"
 
 [dependencies]
-futures = "0.3.34"
+futures = { workspace = true }
 libpulse-binding = "2.30.1"
 log = { workspace = true }
 thiserror = "2.0.20"

@@ -8,11 +8,11 @@ license = "LGPL-3.0-or-later"
 [dependencies]
 pulseaudio-wrapper = { path = "../pulseaudio-wrapper" }
 async-trait = "0.1.92"
-futures = "0.3.34"
-tokio = { version = "1.54.1", features = ["macros", "rt", "sync", "time"] }
+futures = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt", "sync", "time"] }
 tokio-serial = "5.5.0"
-tokio-util = { version = "0.7.19", features = ["codec"] }
-anyhow = "1.0.104"
+tokio-util = { workspace = true, features = ["codec"] }
+anyhow = { workspace = true }
 log = { workspace = true }
 
 [dev-dependencies]
