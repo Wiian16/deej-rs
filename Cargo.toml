@@ -2,6 +2,9 @@
 resolver = "3"
 members = ["deej-lib", "deej-rs", "pulseaudio-wrapper"]
 
+[workspace.dependencies]
+log = "0.4.34"
+
 # Clippy config from https://www.namtao.com/rust-toolkit-2026/#clippy-config
 [workspace.lints.clippy]
 pedantic = { level = "deny", priority = -1 }

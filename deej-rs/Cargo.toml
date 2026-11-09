@@ -8,7 +8,7 @@ license = "GPL-3.0-or-later"
 anyhow = "1.0.104"
 clap = { version = "4.6.6", features = ["derive"] }
 deej-lib = { path = "../deej-lib" }
-log = "0.4.34"
+log = { workspace = true }
 notify-debouncer-full = "0.7.0"
 serde = { version = "1.0.229", features = ["derive"] }
 serde-saphyr = "1.2.0"
