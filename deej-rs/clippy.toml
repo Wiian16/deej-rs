@@ -1,5 +1,0 @@
-# Clippy config from https://www.namtao.com/rust-toolkit-2026/#clippy-config
-allow-unwrap-in-tests = true
-allow-expect-in-tests = true
-allow-panic-in-tests = true
-allow-indexing-slicing-in-tests = true

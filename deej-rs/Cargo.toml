@@ -1,36 +1,21 @@
 [package]
 name = "deej-rs"
-version = "0.1.0"
-edition = "2024"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
 license = "GPL-3.0-or-later"
 
 [dependencies]
-anyhow = "1.0.104"
+anyhow = { workspace = true }
 clap = { version = "4.6.6", features = ["derive"] }
 deej-lib = { path = "../deej-lib" }
-log = "0.4.34"
+log = { workspace = true }
 notify-debouncer-full = "0.7.0"
 serde = { version = "1.0.229", features = ["derive"] }
 serde-saphyr = "1.2.0"
 simplelog = "0.12.2"
-tokio = { version = "1.54.1", features = ["rt", "signal", "macros"] }
-tokio-util = "0.7.19"
+tokio = { workspace = true, features = ["rt", "signal", "macros"] }
+tokio-util = { workspace = true }
 
-# Clippy config from https://www.namtao.com/rust-toolkit-2026/#clippy-config
-[lints.clippy]
-pedantic = { level = "deny", priority = -1 }
-nursery = { level = "deny", priority = -1 }
-# DENY PANICS
-unwrap_used = "deny"
-expect_used = "deny"
-indexing_slicing = "deny"
-arithmetic_side_effects = "deny"
-unreachable = "deny"
-unimplemented = "deny"
-unchecked_time_subtraction = "deny"
-todo = "deny"
-string_slice = "deny"
-panic_in_result_fn = "deny"
-panic = "deny"
-exit = "deny"
-as_conversions = "deny"
+[lints]
+workspace = true
