@@ -2,6 +2,11 @@
 resolver = "3"
 members = ["deej-lib", "deej-rs", "pulseaudio-wrapper"]
 
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+authors = ["Ian McGillivary <ianm@ianmcg.dev>"]
+
 [workspace.dependencies]
 log = "0.4.34"
 
